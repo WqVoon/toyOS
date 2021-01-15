@@ -20,7 +20,7 @@ compile: $(SRC_FILE)
 
 run: compile
 	@echo "Run MBR"
-	@[ $$RUNNER != "bochs" ]  && qemu-system-i386 $(IMG_FILE) || bochs -f ./bochs.conf
+	@([ -z $$RUNNER ] || [ $$RUNNER != "bochs" ]) && qemu-system-i386 $(IMG_FILE) || bochs -f ./bochs.conf
 
 clean:
 	@echo "Clean"
