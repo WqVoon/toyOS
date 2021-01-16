@@ -15,5 +15,5 @@ section loader vstart=LOADER_BASE_ADDR
 	int 0x10
 	jmp $
 
-message db "Hello, Loader!"
+message db 13, 10, "Hello Loader!"
 message_end:
