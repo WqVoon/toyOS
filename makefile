@@ -1,4 +1,4 @@
-# 当环境变量 RUNNER='bochs' 时使用 bochs 运行镜像，否则使用 qemu
+# qemu 在 'mov cr0, eax' 语句执行后不能正常工作，故移除
 all: run
 .PHONY: run clean make_img compile compile_loader compile_mbr
 
@@ -25,13 +25,13 @@ compile_mbr: $(MBR_FILE)
 
 compile_loader: $(LOADER_FILE)
 	@nasm $(LOADER_FILE) \
-		&& dd if=$(LOADER_TMP_FILE) of=$(IMG_FILE) bs=512 count=1 seek=2 conv=notrunc,sync \
+		&& dd if=$(LOADER_TMP_FILE) of=$(IMG_FILE) bs=512 count=4 seek=2 conv=notrunc,sync \
 		&& rm -f $(LOADER_TMP_FILE) \
 		&& echo "Compile Loader"
 
 run: compile
 	@echo "Run MBR"
-	@([ -z $$RUNNER ] || [ $$RUNNER != "bochs" ]) && qemu-system-i386 $(IMG_FILE) || bochs -f ./bochs.conf
+	@bochs -f ./bochs.conf
 
 clean:
 	@echo "Clean"
