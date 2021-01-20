@@ -32,7 +32,10 @@ section mbr vstart=0x7c00
 	mov bx, LOADER_BASE_ADDR
 	mov cx, 4
 	call rd_disk
-	jmp LOADER_BASE_ADDR
+
+	; 为了让 loader.asm 中的 total_mem_bytes 的地址为 0xb00
+	; 而删掉了 jmp 指令，故此处直接跳转到 loader_start
+	jmp LOADER_BASE_ADDR + 0x300
 
 ; 从硬盘读取 n 个扇区放到内存中
 ; - ax: 起始扇区，LBA格式
