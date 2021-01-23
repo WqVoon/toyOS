@@ -36,7 +36,6 @@ DESC_S_DATA equ DESC_S_CODE
 DESC_S_SYS  equ 0_0000_0000_0000b
 
 ;几种常用的 type
-;TODO:中间两位的顺序待确认
 ; x=1,c=0,r=0,a=0 代码可执行，非一致，不可读，已访问位 a 清零
 DESC_TYPE_CODE equ 1000_0000_0000b
 ; x=0,e=0,w=1,a=0 数据不可执行，向上扩展，可写，a 清零
@@ -65,3 +64,15 @@ RPL2 equ 10b
 RPL3 equ 11b
 TI_GDT equ 000b
 TI_LDT equ 100b
+
+;------------- 页表相关属性 -------------
+PAGE_DIR_TABLE_POS equ 0x100000
+
+PG_P    equ 1b
+PG_RW_R equ 00b
+PG_RW_W equ 10b
+PG_US_S equ 000b
+PG_US_U equ 100b
+
+;------------- Kernel相关属性 -------------
+KERNEL_BASE_ADDR equ 0xc0000000

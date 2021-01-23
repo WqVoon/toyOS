@@ -107,9 +107,11 @@ loader_start:
 .mem_get_ok:
 	mov [total_mem_bytes], edx
 
-
+;------------- 开启保护模式 -------------
 ;进入保护模式的三步：
-; 1.打开 A20 地址线，加载 gdt，将 cr0 的 pe 位（最低位）设为 1
+; 1.打开 A20 地址线
+; 2.加载 gdt
+; 3.将 cr0 的 pe 位（最低位）设为 1
 	; 打开 A20
 	in al, 0x92
 	or al, 0x02
@@ -138,4 +140,90 @@ p_mode_start:
 
 	mov byte [gs:160], 'P'
 
+;------------- 开启分页 -------------
+;开启分页的三步：
+; 1.准备好页表
+; 2.将页表基地址加载到 cr3 中
+; 3.将 cr0 的 pg 位（最高位）设为 1
+
+	call setup_page
+
+	sgdt [gdt_ptr]
+	; 将 GDT 的基地址加载到 ebx
+	mov ebx, [gdt_ptr + 2]
+	; 分别将 GDT 和 显存段 放置到内核空间中
+	or dword [ebx + 0x18 + 4], KERNEL_BASE_ADDR
+	add dword [gdt_ptr + 2], KERNEL_BASE_ADDR
+	; 将栈放置到内核空间中
+	add esp, KERNEL_BASE_ADDR
+
+	mov eax, PAGE_DIR_TABLE_POS
+	mov cr3, eax
+
+	mov eax, cr0
+	or eax, 0x80000000
+	mov cr0, eax
+
+	lgdt [gdt_ptr]
+
+	mov byte [gs:162], 'V'
+
 	jmp $
+
+;------------- 设置页表及页目录表的内存位图 -------------
+;PAGE_DIR_TABLE_POS 作为页表的起始地址
+;从该地址开始，第一个 4KB 空间作为页目录表
+;真正的页表从第二个 4KB 开始（但是实际的位置有可能不连续？）
+setup_page:
+
+;先清零所有的 PDE，这里会一并把 PDE 的 P 属性置 0，
+;于是在防问那些尚未被初始化的 PDE 时，会导致 PageFault
+	mov ecx, 4096
+	mov esi, 0
+.clear_page_dir:
+	mov byte [PAGE_DIR_TABLE_POS + esi], 0
+	inc esi
+	loop .clear_page_dir
+
+.create_pde:
+	mov eax, PAGE_DIR_TABLE_POS
+	add eax, 0x1000
+	mov ebx, eax
+
+	;构建 PDE 表项指向第一个页表，并把这个表项送给页目录的 0 和 0xc00 上
+	;原因看下面的解释
+	or eax, PG_US_U | PG_RW_W | PG_P
+	mov [PAGE_DIR_TABLE_POS + 0x0], eax
+	mov [PAGE_DIR_TABLE_POS + 0xc00], eax
+
+	;让最后一个 PDE 指向页目录本身，原因待探究
+	sub eax, 0x1000
+	mov [PAGE_DIR_TABLE_POS + 4092], eax
+
+;创建第一张页表中前 1MB 大小的 PTE 表项，让其正确映射到物理地址上
+;因为加载 loader 时尚未开启分页，所以要保证低 1MB 的虚拟地址=物理地址
+	mov ecx, 256 ; 1MB / 4KB = 256个表项
+	mov esi, 0
+	mov edx, PG_US_U | PG_RW_W | PG_P
+.create_pte:
+	mov [ebx + esi*4], edx
+	add edx, 4096 ; 每次增加 4KB
+	inc esi
+	loop .create_pte
+
+;创建内核其他页表对应的 PDE，方便进程共享内核
+;循环 254 次，加上第一个页表共 255 张页表分给内核
+;由于页目录表的最后一项指向页目录本身，不属于内核，所以内核实际的空间为 1GB-4MB
+;但这里只是预备工作，因为页表中不存在实际有效的 PTE，也就是尚未分配实际的内存给内核
+	mov eax, PAGE_DIR_TABLE_POS
+	add eax, 0x2000
+	or eax, PG_US_U | PG_RW_W | PG_P
+	mov ebx, PAGE_DIR_TABLE_POS
+	mov ecx, 254
+	mov esi, 769
+.create_kernel_pde:
+	mov [ebx + esi*4], eax
+	inc esi
+	add eax, 0x1000
+	loop .create_kernel_pde
+	ret
