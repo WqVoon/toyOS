@@ -75,4 +75,15 @@ PG_US_S equ 000b
 PG_US_U equ 100b
 
 ;------------- Kernel相关属性 -------------
-KERNEL_BASE_ADDR equ 0xc0000000
+; 内核所在的 PDE ，用于在开启分页模式后方便计算
+KERNEL_BASE_ADDR     equ 0xc0000000
+; 内核在硬盘中的位置（LBA扇区）
+KERNEL_START_SECTOR  equ 9
+; 内核的二进制文件被加载到内存中的位置
+KERNEL_BIN_BASE_ADDR equ 0x70000
+; 内核的入口地址，其实取决于链接时的 -Ttext 参数
+KERNEL_ENTRY_POINT   equ 0x1500
+
+; ELF 文件中每个 segment 开始一字节所示的内容，代表这个段的类型
+; 在将段加载到内存中时如果是 PT_NULL 就跳过这个段
+PT_NULL equ 0

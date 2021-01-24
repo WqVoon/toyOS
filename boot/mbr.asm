@@ -1,4 +1,4 @@
-%include "boot.inc"
+%include "boot/boot.inc"
 
 section mbr vstart=0x7c00
 	mov ax, cs
