@@ -131,3 +131,30 @@ put_char:
 .done:
 	popad
 	ret
+
+
+;------------- put_str 函数 -------------
+; 将栈中的地址所指向的字符串输出到光标所在位置
+global put_str
+put_str:
+	push ebx
+	push ecx
+	xor ecx, ecx
+	mov ebx, [esp + 12] ; 将地址赋给 ebx
+
+.goon:
+	mov cl, [ebx]
+	cmp cl, 0 ; 判断是否已经到结尾
+	jz .str_over
+
+	push ecx
+	call put_char
+	add esp, 4
+
+	inc ebx
+	jmp .goon
+
+.str_over:
+	pop ecx
+	pop ebx
+	ret
