@@ -1,6 +1,6 @@
 # qemu 在 'mov cr0, eax' 语句执行后不能正常工作，故移除
 all: run
-.PHONY: run clean make_img compile compile_loader compile_mbr compile_kernel
+.PHONY: run clean make_img compile compile_loader compile_mbr compile_kernel compile_asm
 
 # 待编译的汇编代码
 MBR_FILE=boot/mbr.asm
@@ -33,20 +33,19 @@ compile_mbr: $(MBR_FILE)
 	@[ -e $(IMG_FILE) ] || make make_img
 	@nasm $(MBR_FILE) \
 		&& dd if=$(MBR_TMP_FILE) of=$(IMG_FILE) bs=512 count=1 conv=notrunc,sync \
-		&& rm -f $(MBR_TMP_FILE) \
 		&& echo "Compile MBR"
 
 compile_loader: $(LOADER_FILE)
 	@nasm $(LOADER_FILE) \
 		&& dd if=$(LOADER_TMP_FILE) of=$(IMG_FILE) bs=512 count=4 seek=2 conv=notrunc,sync \
-		&& rm -f $(LOADER_TMP_FILE) \
 		&& echo "Compile Loader"
 
-compile_kernel:
+compile_asm: $(KERNEL_LIB_FUNCS_SRC)
+	@for i in $(KERNEL_LIB_FUNCS_SRC); do nasm -f elf $$i; done
+
+compile_kernel: compile_asm
 	@$(GCC) -m32 -I $(KERNEL_LIB_HEADER) -c -o $(KERNEL_TMP_FILE) $(KERNEL_FILE) \
-		&& nasm -f elf -o $(KERNEL_LIB_FUNCS_DST) $(KERNEL_LIB_FUNCS_SRC) \
 		&& $(LD) -m elf_i386 $(KERNEL_TMP_FILE) $(KERNEL_LIB_FUNCS_DST) -Ttext 0xc0001500 -e main -o $(KERNEL_IMG) \
-		&& rm -f $(KERNEL_TMP_FILE) $(KERNEL_LIB_FUNCS_DST) \
 		&& dd if=$(KERNEL_IMG) of=$(IMG_FILE) bs=512 count=200 seek=9 conv=notrunc,sync \
 		&& echo "Compile kernel"
 
@@ -55,4 +54,4 @@ run: compile
 
 clean:
 	@echo "Clean"
-	@rm -f $(IMG_FILE) $(KERNEL_IMG)
+	@rm -f $(IMG_FILE) $(KERNEL_IMG) $(KERNEL_TMP_FILE) $(LOADER_TMP_FILE) $(MBR_TMP_FILE) $(KERNEL_LIB_FUNCS_DST)
