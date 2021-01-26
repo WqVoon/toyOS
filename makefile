@@ -13,6 +13,11 @@ KERNEL_TMP_FILE=$$(echo $(KERNEL_FILE) | cut -d. -f1)
 # 交叉编译工具
 GCC=x86_64-elf-gcc
 LD=x86_64-elf-ld
+# Kernel 头文件所在目录
+KERNEL_LIB_HEADER=kernel/lib/kernel
+# Kernel 库函数们
+KERNEL_LIB_FUNCS_SRC=kernel/lib/kernel/*.asm
+KERNEL_LIB_FUNCS_DST=kernel/lib/kernel/*.o
 # 内核镜像文件
 KERNEL_IMG=kernel/kernel.bin
 # 写入的镜像文件
@@ -38,9 +43,10 @@ compile_loader: $(LOADER_FILE)
 		&& echo "Compile Loader"
 
 compile_kernel:
-	@$(GCC) -m32 -c -o $(KERNEL_TMP_FILE) $(KERNEL_FILE) \
-		&& $(LD) -m elf_i386 $(KERNEL_TMP_FILE) -Ttext 0xc0001500 -e main -o $(KERNEL_IMG) \
-		&& rm -f $(KERNEL_TMP_FILE) \
+	@$(GCC) -m32 -I $(KERNEL_LIB_HEADER) -c -o $(KERNEL_TMP_FILE) $(KERNEL_FILE) \
+		&& nasm -f elf -o $(KERNEL_LIB_FUNCS_DST) $(KERNEL_LIB_FUNCS_SRC) \
+		&& $(LD) -m elf_i386 $(KERNEL_TMP_FILE) $(KERNEL_LIB_FUNCS_DST) -Ttext 0xc0001500 -e main -o $(KERNEL_IMG) \
+		&& rm -f $(KERNEL_TMP_FILE) $(KERNEL_LIB_FUNCS_DST) \
 		&& dd if=$(KERNEL_IMG) of=$(IMG_FILE) bs=512 count=200 seek=9 conv=notrunc,sync \
 		&& echo "Compile kernel"
 

@@ -1,17 +1,12 @@
-// 第三行的偏移量
-#define LINE_3_BASE_OFFSET 320
+#include "print.h"
 
 int main(void) {
-	// 尝试向显存输出内容
-	const char msg[] = "Hello, Kernel!";
-	// 显存首地址
-	char* video_base_addr = (char*)0xc00b8000;
+	// 测试 \r \h \n 三个控制字符以及基本光标移动
+	const char str[] = "\rh\bHello,\nKernel!";
+	const int lenth = sizeof(str)-1;
 
-	int guard = sizeof(msg);
-	for (int idx=0; idx<guard; idx++) {
-		video_base_addr[LINE_3_BASE_OFFSET + idx*2] = msg[idx];
+	for (int idx=0; idx < lenth; idx++) {
+		put_char(str[idx]);
 	}
-
-	while(1);
 	return 0;
 }
