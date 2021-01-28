@@ -1,12 +1,11 @@
 #include "print.h"
 
-extern int get_counter();
+extern void showmsg();
 
 int main(void) {
 	put_str("\nHello Kernel!\n");
-	put_int(get_counter()); put_char(' ');
-	put_int(get_counter()); put_char(' ');
-	put_int(get_counter()); put_char(' ');
-	put_int(get_counter()); put_char(' ');
+	showmsg();
+
+	while(1);
 	return 0;
 }
