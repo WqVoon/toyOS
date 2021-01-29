@@ -16,7 +16,7 @@
 		out 0x20, al ; 向主片发送
 
 		add esp, 4 ; 跳过 error_code
-		jmp $
+		; jmp $
 		iret
 
 	section .data

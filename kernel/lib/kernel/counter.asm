@@ -1,5 +1,6 @@
 ;------------- get_counter 函数 -------------
 ; 每次调用会自增 counter_buffer
+[bist 32]
 
 section .data
 counter_buffer dq 0

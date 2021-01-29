@@ -13,6 +13,8 @@ KERNEL_TMP_FILE=$$(echo $(KERNEL_FILE) | cut -d. -f1)
 # 交叉编译工具
 GCC=x86_64-elf-gcc
 LD=x86_64-elf-ld
+# 一般头文件所在目录
+LIB_HEADER=kernel/lib
 # Kernel 头文件所在目录
 KERNEL_LIB_HEADER=kernel/lib/kernel
 # Kernel 库函数们
@@ -48,17 +50,17 @@ compile_asm: $(KERNEL_LIB_FUNCS_SRC)
 
 compile_c: $(KERNEL_UTI_FUNCS_SRC)
 	@for i in $(KERNEL_UTI_FUNCS_SRC); \
-		do $(GCC) -I $(KERNEL_LIB_HEADER) -m32 -c $$i -o $$(echo $$i | cut -d. -f1).o; \
+		do $(GCC) -std=c99 -fno-builtin -I $(KERNEL_LIB_HEADER) -I $(LIB_HEADER) -m32 -c $$i -o $$(echo $$i | cut -d. -f1).o; \
 		done
 
 compile_kernel: compile_c compile_asm
-	@$(GCC) -m32 -I $(KERNEL_LIB_HEADER) -c -o $(KERNEL_TMP_FILE) $(KERNEL_FILE) \
+	@$(GCC) -std=c99 -fno-builtin -m32 -I $(KERNEL_LIB_HEADER) -I $(LIB_HEADER) -c -o $(KERNEL_TMP_FILE) $(KERNEL_FILE) \
 		&& $(LD) -m elf_i386 $(KERNEL_TMP_FILE) $(KERNEL_LIB_FUNCS_DST) $(KERNEL_UTI_FUNCS_DST) \
 			-Ttext 0xc0001500 -e main -o $(KERNEL_IMG) \
 		&& dd if=$(KERNEL_IMG) of=$(IMG_FILE) bs=512 count=200 seek=9 conv=notrunc,sync \
 		&& echo "Compile kernel"
 
-run: compile
+run: clean compile
 	@bochs -f ./bochs.conf
 
 clean:
