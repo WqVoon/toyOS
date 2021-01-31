@@ -3,31 +3,42 @@
 %define ZERO push 0
 
 ;第一个参数为中断号，第二个参数为上述两个操作的其中之一
+extern idt_table
 %macro VECTOR 2
 	section .text
 	intr%1entry:
 		%2
-		push intr_str
-		call put_str
-		add esp, 4
+		push ds
+		push es
+		push fs
+		push gs
+		pushad
 
 		mov al, 0x20 ; 中断结束命令 EOI
 		out 0xa0, al ; 向从片发送
 		out 0x20, al ; 向主片发送
 
-		add esp, 4 ; 跳过 error_code
-		; jmp $
-		iret
+		push %1
+		call [idt_table + %1*4]
+		jmp intr_exit
 
 	section .data
 		dd intr%1entry
 %endmacro
 
-extern put_str
+section .text
+global intr_exit
+intr_exit:
+	add esp, 4 ; 跳过中断号
+	popad
+	pop gs
+	pop fs
+	pop es
+	pop ds
+	add esp, 4 ; 跳过 error_code
+	iretd
 
 section .data
-intr_str db "Interrupt Occur!", 0xa, 0
-
 global intr_entry_table
 intr_entry_table:
 

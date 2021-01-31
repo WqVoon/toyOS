@@ -52,8 +52,56 @@ typedef struct {
 #define IDT_DESC_CNT 0x21
 // 中断描述符们
 static gate_desc idt[IDT_DESC_CNT];
-// 中断处理程序们
+// 中断处理程序入口们，定义在 Kernel.asm 中，实际调用 idt_table 中的处理程序
 extern intr_handler intr_entry_table[IDT_DESC_CNT];
+// 用于保存中断名
+char* intr_name[IDT_DESC_CNT];
+// 实际的中断处理程序
+intr_handler idt_table[IDT_DESC_CNT];
+
+/**
+ * 通用的中断处理函数，一般用于异常处理
+ */
+static void general_intr_handler(uint8_t vec_nr) {
+	// TODO:IRQ7 和 IRQ15 会产生伪中断，不用处理（？）
+	if (vec_nr == 0x27 || vec_nr == 0x2f) {
+		return;
+	}
+	put_str("int vector: ");
+	put_int(vec_nr);
+	put_char('\n');
+}
+
+/**
+ * 注册一般中断处理函数及异常名
+ */
+static void exception_init(void) {
+	for (int i=0; i<IDT_DESC_CNT; i++) {
+		idt_table[i] = general_intr_handler;
+		intr_name[i] = "unknown";
+	}
+
+	intr_name[0x00] = "#DE Device Error";
+	intr_name[0x01] = "#DB Debug Exception";
+	intr_name[0x02] = "NMI Interrupt";
+	intr_name[0x03] = "#BP Breakpoint Exception";
+	intr_name[0x04] = "#OF Overflow Exception";
+	intr_name[0x05] = "#BR BOUND Range Exceeded Exception";
+	intr_name[0x06] = "#UD Invalid Opcode Exception";
+	intr_name[0x07] = "#NM Device Not Avaliable Exception";
+	intr_name[0x08] = "#DF Double Fault Exception";
+	intr_name[0x09] = "Coprocessor Segment Overrun";
+	intr_name[0x0a] = "#TS Invalid TSS Exception";
+	intr_name[0x0b] = "#NP Segment Not Present";
+	intr_name[0x0c] = "#SS Stack Fault Excecption";
+	intr_name[0x0d] = "#GP General Protection Exception";
+	intr_name[0x0e] = "#PF Page-Fault Exception";
+	// 第15项是保留项
+	intr_name[0x10] = "#MF x87 FPU Floating-Point Error";
+	intr_name[0x11] = "#AC Alignment Check Exception";
+	intr_name[0x12] = "#MC Machine-Check Exception";
+	intr_name[0x13] = "#XF SIMD Floating-Point Exception";
+}
 
 
 /**
@@ -71,7 +119,7 @@ static void make_idt_desc(
 
 
 /**
- * 初始化中断描述符表
+ * 初始化 idt 表中所有的中断描述符表
  */
 static void idt_desc_init(void) {
 	for (int i=0; i<IDT_DESC_CNT; i++) {
@@ -91,16 +139,8 @@ void idt_init() {
 	put_str("idt_init start\n");
 
 	idt_desc_init();
+	exception_init();
 	pic_init();
-
-	// #pragma pack(1)
-	// struct {
-	// 	uint16_t limit;
-	// 	uint32_t base_addr;
-	// } idt_operand;
-
-	// idt_operand.limit     = sizeof(idt)-1;
-	// idt_operand.base_addr = (uint32_t)idt;
 
 	uint64_t idt_operand = (
 		sizeof(idt)-1 | (uint64_t)idt << 16
