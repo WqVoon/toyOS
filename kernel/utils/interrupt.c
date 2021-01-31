@@ -3,11 +3,59 @@
 #include "global.h"
 #include "interrupt.h"
 
+#define EFLAGS_IF_MASK 0x00000200
+#define GET_EFLAGS(EFLAG_VAR)\
+	__asm__ __volatile__ ("pushfl; popl %0": "=g"(EFLAG_VAR))
+
+/**
+ * 返回当前 eflags 内中断的状态
+ */
+intr_status intr_get_status() {
+	uint32_t eflags = 0;
+	GET_EFLAGS(eflags);
+	return (EFLAGS_IF_MASK & eflags)? INTR_ON: INTR_OFF;
+}
+
+/**
+ * 打开中断并返回之前中断的状态
+ */
+intr_status intr_enable() {
+	intr_status old_status;
+	if (INTR_ON == intr_get_status()) {
+		old_status = INTR_ON;
+	} else {
+		old_status = INTR_OFF;
+		__asm__ __volatile__ ("sti");
+	}
+	return old_status;
+}
+
+/**
+ * 关闭中断并返回之前中断的状态
+ */
+intr_status intr_disable() {
+	intr_status old_status;
+	if (INTR_ON == intr_get_status()) {
+		old_status = INTR_ON;
+		__asm__ __volatile__ ("cli"::: "memory"); //TODO: memory 的用途?
+	} else {
+		old_status = INTR_OFF;
+	}
+	return old_status;
+}
+
+/**
+ * 将中断状态设置为 status
+ */
+intr_status intr_set_status(intr_status status) {
+	return (status & INTR_ON)? intr_enable(): intr_disable();
+}
+
+
 #define PIC_M_CTRL 0x20 // 主片控制端口
 #define PIC_M_DATA 0x21 // 主片数据端口
 #define PIC_S_CTRL 0xa0 // 从片...
 #define PIC_S_DATA 0xa1 // ...
-
 
 /**
  * 初始化 8259A 芯片
