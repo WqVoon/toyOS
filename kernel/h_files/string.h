@@ -1,3 +1,6 @@
+#ifndef __LIB_STRING_H
+#define __LIB_STRING_H
+
 #include "stdint.h"
 
 void memset(void*, uint8_t, uint32_t);
@@ -19,3 +22,5 @@ char* strrchr(const char*, const uint8_t);
 char* strcat(char*, const char*);
 
 uint32_t strchrs(const char*, uint8_t);
+
+#endif
