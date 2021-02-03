@@ -9,7 +9,7 @@
  * 初始化位图，将其设置全部设置为 0
  */
 void bitmap_init(bitmap* btmp) {
-	memset(btmp, 0, btmp->btmp_bytes_len);
+	memset(btmp->bits, 0, btmp->btmp_bytes_len);
 }
 
 /**
@@ -33,6 +33,7 @@ int bitmap_scan(bitmap* btmp, uint32_t cnt) {
 		&&
 		(idx_byte < btmp->btmp_bytes_len)
 	) { idx_byte++; }
+
 
 	ASSERT(idx_byte < btmp->btmp_bytes_len);
 	if (idx_byte == btmp->btmp_bytes_len) return -1;
