@@ -3,6 +3,8 @@
 
 #include "stdint.h"
 
+typedef uint8_t bool;
+
 #define RPL0 0
 #define RPL1 1
 #define RPL2 2
