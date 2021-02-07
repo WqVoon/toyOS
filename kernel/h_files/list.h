@@ -9,7 +9,7 @@
 
 /* ? */
 #define elem2entry(struct_type, struct_member_name, elem_ptr)\
-	(sturct_type*)((int)elem_ptr - offset(sturct_type, struct_member_name))
+	(struct_type*)((int)elem_ptr - offset(struct_type, struct_member_name))
 
 /* TODO:链表中的 node ，尚不清楚为什么没有数据区 */
 struct list_elem {

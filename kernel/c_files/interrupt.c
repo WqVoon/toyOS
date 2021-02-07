@@ -107,6 +107,7 @@ char* intr_name[IDT_DESC_CNT];
 // 实际的中断处理程序
 intr_handler idt_table[IDT_DESC_CNT];
 
+extern void set_cursor(uint32_t pos);
 /**
  * 通用的中断处理函数，一般用于异常处理
  */
@@ -115,9 +116,32 @@ static void general_intr_handler(uint8_t vec_nr) {
 	if (vec_nr == 0x27 || vec_nr == 0x2f) {
 		return;
 	}
-	put_str("int vector: ");
-	put_int(vec_nr);
-	put_char('\n');
+	set_cursor(0);
+	int cursor_pos = 0;
+	while (cursor_pos < 320) {
+		put_char(' ');
+		cursor_pos++;
+	}
+
+	set_cursor(0);
+	put_str("!!!!! exception message begin !!!!!\n");
+	set_cursor(88);
+	put_str(intr_name[vec_nr]);
+
+	// 如果为 Pagefault，那么打印出缺失的地址并悬停
+	if (vec_nr == 14) {
+		int page_fault_vaddr = 0;
+		// 地址存放在 cr2 中
+		__asm__ __volatile__ (
+			"movl %%cr2, %0"
+			: "=r"(page_fault_vaddr)
+		);
+		put_str("\npage fault addr is ");
+		put_int(page_fault_vaddr);
+	}
+	put_str("\n!!!!! exception message end   !!!!!\n");
+
+	while (1);
 }
 
 /**
@@ -163,6 +187,12 @@ static void make_idt_desc(
 	desc->attribute = attr;
 	desc->func_offset_low_word  = (uint32_t) function & 0x0000ffff;
 	desc->func_offset_high_word = ((uint32_t) function & 0xffff0000) >> 16;
+}
+
+
+/* 为 vector_no 指明的中断注册中断处理函数 function */
+void register_handler(uint8_t vector_no, intr_handler function) {
+	idt_table[vector_no] = function;
 }
 
 

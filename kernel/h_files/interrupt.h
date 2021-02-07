@@ -16,4 +16,6 @@ intr_status intr_set_status();
 intr_status intr_enable();
 intr_status intr_disable();
 
+void register_handler(uint8_t, intr_handler);
+
 #endif

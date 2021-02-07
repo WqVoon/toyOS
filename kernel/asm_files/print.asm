@@ -8,6 +8,30 @@ put_int_buffer dq 0
 [bits 32]
 section .text
 
+;------------- set_cursor 函数 -------------
+; 将光标设置在指定位置上
+global set_cursor
+set_cursor:
+	mov ebx, [esp+4]
+	pushad
+	; 设置光标的高 8 位
+	mov dx, 0x03d4
+	mov al, 0x0e
+	out dx, al
+	mov dx, 0x03d5
+	mov al, bh
+	out dx, al
+
+	; 设置光标的低 8 位
+	mov dx, 0x03d4
+	mov al, 0x0f
+	out dx, al
+	mov dx, 0x03d5
+	mov al, bl
+	out dx, al
+	popad
+	ret
+
 ;------------- put_char 函数 -------------
 ; 将栈中的一个字符输出到光标所在的位置
 global put_char

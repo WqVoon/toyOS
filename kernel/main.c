@@ -5,19 +5,28 @@
 #include "memory.h"
 #include "thread.h"
 
-void k_thread_a(void*);
+void thread_task(void*);
 
 int main(void) {
 	put_str("I am kernel\n");
 	init_all();
 
-	thread_start("k_thread_a", 31, k_thread_a, "argA ");
+	put_str("Main-Thread PCB Addr: ");
+	put_int((uint32_t) running_thread());
+	put_char('\n');
+
+	thread_start("k_thread_a", 31, thread_task, "argA ");
+	thread_start("k_thread_b", 8, thread_task, "argB ");
+
+	intr_enable();
+	
+	put_str("Main ");
 
 	while(1);
 	return 0;
 }
 
-void k_thread_a(void* arg) {
-	char* para = arg;
-	while (1) put_str(para);
+void thread_task(void* arg) {
+	char* str = (char*) arg;
+	put_str(str);
 }

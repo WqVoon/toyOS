@@ -2,6 +2,7 @@
 #define __THREAD_H
 
 #include "stdint.h"
+#include "list.h"
 
 /* 自定义的通用函数类型，将被用在很多线程函数中作为参数类型 */
 typedef void thread_func(void*);
@@ -51,8 +52,8 @@ typedef struct {
 	// 该结构在线程第一次运行时指向 kernel_thread
 	// 其他的时候指向 switch_to 的返回地址
 	void (*eip) (thread_func* func, void* func_arg);
-	// 以下结构仅在线程第一次运行时使用，详见 kernel_thread 函数
 	void (*unused_retaddr);
+	// 以下结构仅在线程第一次运行时使用，详见 kernel_thread 函数
 	thread_func* function;
 	void* func_arg;
 } thread_stack;
@@ -63,9 +64,27 @@ typedef struct {
 	task_status status;
 	uint8_t priority;
 	char name[16];
+
+	// 任务当前的 ticks ，每次加入到 ready 队列时置为 priority
+	// 占用 cpu 其间每次发生时钟中断时减一，为零则让出 cpu
+	uint32_t ticks;
+	// 任务从上 cpu 运行后至今一共占用了多少 ticks，只增不减
+	uint32_t elapsed_ticks;
+	// 其他 list 中的结点标记，用于表示此任务当前的状态
+	// 比如若该标记在 thread_ready_list 中则表示当前任务出于就绪状态
+	struct list_elem general_tag;
+	// thread_all_list 中的结点标记，用于表示此任务属于一个合法的线程
+	// TODO:线程若被创建则一定在 thread_all_list 中
+	struct list_elem all_list_tag;
+	// 进程自己页表的虚拟地址，若当前任务为线程则该项为 NULL
+	uint32_t* pgdir;
+	// 魔数，用于检测 PCB 信息是否被损坏
 	uint32_t stack_magic;
 } task_struct;
 
 task_struct* thread_start(char*, int, thread_func, void*);
+task_struct* running_thread();
+void thread_init(void);
+void schedule(void);
 
 #endif
