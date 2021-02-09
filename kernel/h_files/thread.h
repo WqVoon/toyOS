@@ -86,5 +86,7 @@ task_struct* thread_start(char*, int, thread_func, void*);
 task_struct* running_thread();
 void thread_init(void);
 void schedule(void);
+void thread_block(task_status);
+void thread_unblock(task_struct*);
 
 #endif

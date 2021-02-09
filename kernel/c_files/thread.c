@@ -148,3 +148,42 @@ void thread_init(void) {
 	make_main_thread();
 	put_str("thread_init done\n");
 }
+
+/* 将当前线程阻塞，并把其状态标记为 stat */
+void thread_block(task_status stat) {
+	ASSERT(
+		(stat == TASK_BLOCKED)
+		|| (stat == TASK_WAITING)
+		|| (stat == TASK_HANGING)
+	);
+
+	intr_status old_status = intr_disable();
+
+	/*
+	 将当前线程的 status 改变后，就不会加入到 thread_ready_list 中
+	 从而通过主动发起 schedule 实现线程阻塞
+	*/
+	task_struct* cur_thread = running_thread();
+	cur_thread->status = stat;
+	schedule();
+
+	intr_set_status(old_status);
+}
+
+/* 将线程 pthread 解除阻塞 */
+void thread_unblock(task_struct* pthread) {
+	intr_status old_status = intr_disable();
+
+	task_status task_stat = pthread->status;
+	ASSERT(
+		(task_stat == TASK_BLOCKED)
+		|| (task_stat == TASK_WAITING)
+		|| (task_stat == TASK_HANGING)
+	);
+
+	ASSERT(! elem_find(&thread_ready_list, &pthread->general_tag));
+	list_push(&thread_ready_list, &pthread->general_tag);
+	pthread->status = TASK_READY;
+
+	intr_set_status(old_status);
+}
