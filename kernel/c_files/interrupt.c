@@ -76,8 +76,8 @@ static void pic_init(void) {
 	outb(PIC_S_DATA, 0x02); // ICW3：设置从片连接到主片的 IR2
 	outb(PIC_S_DATA, 0x01); // ICW4：8086 模式，正常 EOI
 
-	// 打开主片的 IR0，当前仅支持时钟中断
-	outb(PIC_M_DATA, 0xfe);
+	// 打开主片的 IR0，当前仅支持键盘中断
+	outb(PIC_M_DATA, 0xfd);
 	outb(PIC_S_DATA, 0xff);
 
 	put_str("  pic_init done\n");
@@ -97,7 +97,7 @@ typedef struct {
 } gate_desc;
 
 // 中断描述符的数量
-#define IDT_DESC_CNT 0x21
+#define IDT_DESC_CNT 0x30
 // 中断描述符们
 static gate_desc idt[IDT_DESC_CNT];
 // 中断处理程序入口们，定义在 Kernel.asm 中，实际调用 idt_table 中的处理程序

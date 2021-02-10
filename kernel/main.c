@@ -12,37 +12,16 @@ uint64_t value = 0;
 void thread_task(void*);
 
 int main(void) {
-	lock plock;
-	lock_init(&plock);
-
 	put_str("I am kernel\n");
 	init_all();
-
-	thread_start("k_thread_a", 1, thread_task, &plock);
-	thread_start("k_thread_b", 1, thread_task, &plock);
-
 	intr_enable();
 
-	for (int i=0; i<LOOP_TIMES; i++) {
-		// lock_acquire(&plock);
-		value += 1;
-		// lock_release(&plock);
-	}
-
-	while(1) {
-		put_str("Value: ");
-		put_int(value);
-		put_char('\n');
-	}
-
+	while(1);
 	return 0;
 }
 
 void thread_task(void* arg) {
-	lock* plock = (lock*)arg;
-	for (int i=0; i<LOOP_TIMES; i++) {
-		// lock_acquire(plock);
-		value += 1;
-		// lock_release(plock);
-	}
+	const char* str = (const char*)arg;
+
+	put_str(arg);
 }

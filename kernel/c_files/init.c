@@ -3,6 +3,7 @@
 #include "interrupt.h"
 #include "memory.h"
 #include "thread.h"
+#include "keyboard.h"
 
 extern void timer_init(void);
 
@@ -15,4 +16,5 @@ void init_all() {
 	mem_init();
 	timer_init();
 	thread_init();
+	keyboard_init();
 }
