@@ -32,20 +32,15 @@ set_cursor:
 	popad
 	ret
 
-;------------- put_char 函数 -------------
-; 将栈中的一个字符输出到光标所在的位置
-global put_char
-put_char:
-	; 压入所有双字长的寄存器
-	; 顺序为 eax, ecx, edx, ebx, esp, ebp, esi, edi
-	pushad
+;------------- get_cursor 函数 -------------
+; 获取当前光标的位置
+global get_cursor
+get_cursor:
+	push ebp
+	push ebx
+	push edi
+	push esi
 
-	; 保险起见，每次调用都赋值 gs 为视频段选择子
-	;TODO: 这里是否需要先保存原值，并在返回用户进程前还原选择子
-	mov ax, SELECTOR_VIDEO
-	mov gs, ax
-
-;获取当前光标位置
 	; 获取高 8 位
 	mov dx, 0x03d4
 	mov al, 0x0e
@@ -62,6 +57,29 @@ put_char:
 	out dx, al
 	mov dx, 0x03d5
 	in al, dx
+
+	pop esi
+	pop edi
+	pop ebx
+	pop ebp
+	ret
+
+
+;------------- put_char 函数 -------------
+; 将栈中的一个字符输出到光标所在的位置
+global put_char
+put_char:
+	; 压入所有双字长的寄存器
+	; 顺序为 eax, ecx, edx, ebx, esp, ebp, esi, edi
+	pushad
+
+	; 保险起见，每次调用都赋值 gs 为视频段选择子
+	;TODO: 这里是否需要先保存原值，并在返回用户进程前还原选择子
+	mov ax, SELECTOR_VIDEO
+	mov gs, ax
+
+	; 获取当前光标位置
+	call get_cursor
 
 	; 暂存光标位置到 bx，这个值为下一个字符的光标坐标值
 	mov bx, ax

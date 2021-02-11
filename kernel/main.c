@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "thread.h"
+#include "console.h"
 #include "keyboard.h"
 
 #define LOOP_TIMES 100000
@@ -17,8 +18,11 @@ int main(void) {
 	init_all();
 	intr_enable();
 
-	thread_start("T-a", 31, thread_task, "A_");
-	thread_start("T-b", 31, thread_task, "B_");
+	thread_start("T-a", 1, thread_task, "A");
+	thread_start("T-b", 1, thread_task, "B");
+	thread_start("T-c", 1, thread_task, "C");
+	thread_start("T-d", 1, thread_task, "D");
+	thread_start("T-e", 1, thread_task, "E");
 
 	while(1);
 	return 0;
@@ -26,14 +30,10 @@ int main(void) {
 
 void thread_task(void* arg) {
 	const char* str = (const char*)arg;
+
 	while (1) {
-		intr_status old_status = intr_disable();
-		if (! ioq_empty(&kbd_buf)) {
-			put_str(arg);
-			char byte = ioq_getchar(&kbd_buf);
-			put_char(byte);
-			put_char(' ');
-		}
-		intr_set_status(old_status);
+		console_put_str("This is a msg from Thread-");
+		console_put_str(str);
+		console_put_str(" ");
 	}
 }
