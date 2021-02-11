@@ -1,8 +1,12 @@
+#include "ioqueue.h"
 #include "keyboard.h"
 #include "print.h"
 #include "interrupt.h"
 #include "io.h"
 #include "global.h"
+
+// 键盘缓冲区
+ioqueue kbd_buf;
 
 // #define LOG(msg) put_str(msg "\n")
 #define LOG(msg)
@@ -107,7 +111,10 @@ static void intr_keyboard_handler(void) {
 		char cur_char = keymap[index][shift];
 
 		if (cur_char) {
-			put_char(cur_char);
+			if (! ioq_full(&kbd_buf)) {
+				put_char(cur_char);
+				ioq_putchar(&kbd_buf, cur_char);
+			}
 			return;
 		}
 
@@ -130,5 +137,6 @@ static void intr_keyboard_handler(void) {
 void keyboard_init(void) {
 	put_str("keyboard init start\n");
 	register_handler(0x21, intr_keyboard_handler);
+	ioqueue_init(&kbd_buf);
 	put_str("keyboard init done\n");
 }

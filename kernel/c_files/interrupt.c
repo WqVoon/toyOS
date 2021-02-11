@@ -77,7 +77,7 @@ static void pic_init(void) {
 	outb(PIC_S_DATA, 0x01); // ICW4：8086 模式，正常 EOI
 
 	// 打开主片的 IR0，当前仅支持键盘中断
-	outb(PIC_M_DATA, 0xfd);
+	outb(PIC_M_DATA, 0xfc);
 	outb(PIC_S_DATA, 0xff);
 
 	put_str("  pic_init done\n");
