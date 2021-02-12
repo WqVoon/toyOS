@@ -7,9 +7,7 @@
 #include "thread.h"
 #include "console.h"
 #include "keyboard.h"
-
-#define LOOP_TIMES 100000
-uint64_t value = 0;
+#include "global.h"
 
 void thread_task(void*);
 
@@ -18,11 +16,8 @@ int main(void) {
 	init_all();
 	intr_enable();
 
-	thread_start("T-a", 1, thread_task, "A");
-	thread_start("T-b", 1, thread_task, "B");
-	thread_start("T-c", 1, thread_task, "C");
-	thread_start("T-d", 1, thread_task, "D");
-	thread_start("T-e", 1, thread_task, "E");
+	gdt_desc c1 = *(gdt_desc*)0x908;
+	gdt_desc c2 = *(gdt_desc*)0x928;
 
 	while(1);
 	return 0;

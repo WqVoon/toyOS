@@ -4,6 +4,8 @@
 #include "stdint.h"
 #include "list.h"
 
+#define PG_SIZE 4096
+
 /* 自定义的通用函数类型，将被用在很多线程函数中作为参数类型 */
 typedef void thread_func(void*);
 

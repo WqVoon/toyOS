@@ -7,6 +7,7 @@
 #include "keyboard.h"
 
 extern void timer_init(void);
+extern void tss_init();
 
 /**
  * 初始化所有模块
@@ -19,4 +20,5 @@ void init_all() {
 	thread_init();
 	console_init();
 	keyboard_init();
+	tss_init();
 }

@@ -7,8 +7,6 @@
 #include "memory.h"
 #include "interrupt.h"
 
-#define PG_SIZE 4096
-
 // 主线程的 PCB
 task_struct* main_thread;
 // 就绪队列
