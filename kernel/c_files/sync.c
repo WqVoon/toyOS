@@ -1,3 +1,4 @@
+#include "thread.h"
 #include "debug.h"
 #include "sync.h"
 #include "interrupt.h"

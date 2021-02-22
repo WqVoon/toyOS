@@ -7,6 +7,8 @@
 #include "memory.h"
 #include "interrupt.h"
 
+void process_activate(task_struct* p_thread);
+
 // 主线程的 PCB
 task_struct* main_thread;
 // 就绪队列
@@ -134,6 +136,9 @@ void schedule(void) {
 	// 获取 elem 对应的 PCB
 	task_struct* next = elem2entry(task_struct, general_tag, thread_tag);
 	next->status = TASK_RUNNING;
+
+	process_activate(next);
+
 	// 切换任务
 	switch_to(cur, next);
 }

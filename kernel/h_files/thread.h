@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "list.h"
+#include "memory.h"
 
 #define PG_SIZE 4096
 
@@ -61,7 +62,7 @@ typedef struct {
 } thread_stack;
 
 /* 进程或线程的 pcb，程序控制块 */
-typedef struct {
+typedef struct __task_struct {
 	uint32_t* self_kstack;
 	task_status status;
 	uint8_t priority;
@@ -80,6 +81,8 @@ typedef struct {
 	struct list_elem all_list_tag;
 	// 进程自己页表的虚拟地址，若当前任务为线程则该项为 NULL
 	uint32_t* pgdir;
+	// 进程自己的虚拟地址池
+	virtual_addr userprog_vaddr;
 	// 魔数，用于检测 PCB 信息是否被损坏
 	uint32_t stack_magic;
 } task_struct;
@@ -90,5 +93,7 @@ void thread_init(void);
 void schedule(void);
 void thread_block(task_status);
 void thread_unblock(task_struct*);
+void init_thread(task_struct* pthread, char* name, int prio);
+void thread_create(task_struct* pthread, thread_func function, void* func_arg);
 
 #endif

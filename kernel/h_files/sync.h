@@ -3,7 +3,9 @@
 
 #include "list.h"
 #include "stdint.h"
-#include "thread.h"
+
+// 前置声明，避免 memory.h sync.h thread.h 三者的循环引用
+typedef struct __task_struct task_struct;
 
 /* 信号量结构 */
 typedef struct {

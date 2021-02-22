@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "bitmap.h"
+#include "sync.h"
 
 #define PG_P_1  1 // pte 或 pde 存在属性位
 #define PG_P_0  0 // 同上
@@ -28,6 +29,7 @@ typedef struct {
 	bitmap   pool_bitmap;
 	uint32_t phy_addr_start;
 	uint32_t pool_size;
+	lock lock;
 } pool;
 
 extern pool kernel_pool, user_pool;
@@ -41,5 +43,9 @@ uint32_t* pde_ptr(uint32_t);
 // void* malloc_page(pool_flags, uint32_t);
 
 void* get_kernel_pages(uint32_t);
+
+uint32_t addr_v2p(uint32_t vaddr);
+
+void* get_a_page(pool_flags pf, uint32_t vaddr);
 
 #endif
