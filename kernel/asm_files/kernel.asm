@@ -38,6 +38,30 @@ intr_exit:
 	add esp, 4 ; 跳过 error_code
 	iretd
 
+extern syscall_table
+section .text
+global syscall_handler
+syscall_handler:
+; 保存现场及保持与宏 VECTOR 格式上的统一
+	push 0
+	push ds
+	push es
+	push fs
+	push gs
+	pushad
+	push 0x80
+; 最多支持 3 个参数的系统调用
+	push edx
+	push ecx
+	push ebx
+; 调用子功能对应的处理函数
+	call [syscall_table + eax*4]
+	add esp, 12 ; 跳过上面的三个参数
+
+; 将返回值放置在栈中原 eax 的位置上，该值由 pushad 压入
+	mov [esp + 8*4], eax
+	jmp intr_exit
+
 section .data
 global intr_entry_table
 intr_entry_table:

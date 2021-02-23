@@ -37,7 +37,7 @@ typedef struct {
 	uint32_t es;
 	uint32_t ds;
 
-	// 以下由 cpu 从低特权级进入高特权级时压入
+	// 以下做中断恢复用，其中 esp 和 ss 仅在涉及特权级变换时被 cpu 压入
 	uint32_t err_code;
 	void (*eip) (void);
 	uint32_t cs;
@@ -64,6 +64,7 @@ typedef struct {
 /* 进程或线程的 pcb，程序控制块 */
 typedef struct __task_struct {
 	uint32_t* self_kstack;
+	int16_t pid;
 	task_status status;
 	uint8_t priority;
 	char name[16];

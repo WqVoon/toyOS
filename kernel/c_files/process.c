@@ -101,16 +101,9 @@ void process_execute(void* filename, char* name) {
 	uint32_t default_prio = 31;
 	// PCB 在内核空间中申请
 	task_struct* thread = get_kernel_pages(1);
-
-	void(*log)(const char*) = console_put_str;
-
-	log("0");
 	init_thread(thread, name, default_prio);
-	log("1");
 	create_user_vaddr_bitmap(thread);
-	log("2");
 	thread_create(thread, start_process, filename);
-	log("3");
 	thread->pgdir = create_page_dir();
 
 	intr_status old_status = intr_disable();

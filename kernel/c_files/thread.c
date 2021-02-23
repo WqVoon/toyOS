@@ -27,6 +27,15 @@ task_struct* running_thread() {
 	return (task_struct*) (esp & 0xfffff000);
 }
 
+lock pid_lock;
+static int16_t allocate_pid(void) {
+	static int16_t next_pid = 0;
+	lock_acquire(&pid_lock);
+	next_pid++;
+	lock_release(&pid_lock);
+	return next_pid;
+}
+
 /**
  * 由 kernel_thread 去执行 function(fun_arg)
  * 该函数作为 thread_stack 中的 eip 由 ret 指令跳转并执行
@@ -65,6 +74,7 @@ void thread_create(task_struct* pthread, thread_func function, void* func_arg) {
 /* 在 PCB 中初始化线程基本信息，信息位于 PCB 所在页的低地址 */
 void init_thread(task_struct* pthread, char* name, int prio) {
 	memset(pthread, 0, sizeof(*pthread));
+	pthread->pid = allocate_pid();
 	strcpy(pthread->name, name);
 
 	if (pthread == main_thread) {
@@ -148,6 +158,7 @@ void thread_init(void) {
 	put_str("thread_init start\n");
 	list_init(&thread_ready_list);
 	list_init(&thread_all_list);
+	lock_init(&pid_lock);
 	make_main_thread();
 	put_str("thread_init done\n");
 }

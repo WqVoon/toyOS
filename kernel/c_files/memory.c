@@ -6,6 +6,7 @@
 #include "string.h"
 #include "thread.h"
 #include "sync.h"
+#include "console.h"
 
 // 每一页的大小
 #define PG_SIZE 4096
@@ -184,11 +185,11 @@ static void page_table_add(void* _vaddr, void* _page_phyaddr) {
 	uint32_t* pde = pde_ptr(vaddr);
 	uint32_t* pte = pte_ptr(vaddr);
 
-	put_str("\nPage_table_add Info:\n");
-	put_str(" Vad:"); put_int(vaddr);         put_char('\n');
-	put_str(" Pad:"); put_int(page_phyaddr);  put_char('\n');
-	put_str(" PDE:"); put_int((uint32_t)pde); put_char('\n');
-	put_str(" PTE:"); put_int((uint32_t)pte); put_char('\n');
+	// console_put_str("\nPage_table_add Info:\n");
+	// console_put_str(" Vad:"); console_put_int(vaddr);         console_put_char('\n');
+	// console_put_str(" Pad:"); console_put_int(page_phyaddr);  console_put_char('\n');
+	// console_put_str(" PDE:"); console_put_int((uint32_t)pde); console_put_char('\n');
+	// console_put_str(" PTE:"); console_put_int((uint32_t)pte); console_put_char('\n');
 
 	if (*pde & 0x1) {
 		ASSERT(! (*pte & 0x1));

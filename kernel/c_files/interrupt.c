@@ -97,7 +97,7 @@ typedef struct {
 } gate_desc;
 
 // 中断描述符的数量
-#define IDT_DESC_CNT 0x30
+#define IDT_DESC_CNT 0x81
 // 中断描述符们
 static gate_desc idt[IDT_DESC_CNT];
 // 中断处理程序入口们，定义在 Kernel.asm 中，实际调用 idt_table 中的处理程序
@@ -195,7 +195,8 @@ void register_handler(uint8_t vector_no, intr_handler function) {
 	idt_table[vector_no] = function;
 }
 
-
+/* 定义在 kernel.asm 中的系统调用 */
+extern uint32_t syscall_handler(void);
 /**
  * 初始化 idt 表中所有的中断描述符表
  */
@@ -207,6 +208,13 @@ static void idt_desc_init(void) {
 			intr_entry_table[i]
 		);
 	}
+
+	// 单独处理 0x80 中断
+	make_idt_desc(
+		&idt[IDT_DESC_CNT-1],
+		IDT_DESC_ATTR_DPL3,
+		syscall_handler
+	);
 	put_str("  idt_desc_init done\n");
 }
 
