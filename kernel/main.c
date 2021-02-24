@@ -10,6 +10,7 @@
 #include "global.h"
 #include "process.h"
 #include "syscall.h"
+#include "stdio.h"
 
 void process_task(void);
 
@@ -18,7 +19,7 @@ int main(void) {
 	intr_enable();
 
 	process_execute(process_task, "process");
-	write("\nThis is main\n");
+	printf("\nMain thread pid: %x%c", getpid(), '\n');
 
 	while(1);
 	return 0;
@@ -27,6 +28,6 @@ int main(void) {
 void process_task(void) {
 	/* 下面的 console_put_str 会引发 GP 异常 */
 	// console_put_str("Wahahaha");
-	write("This is process\n");
+	printf("%s pid: %d\n", "User process", -1 * getpid());
 	while (1);
 }
