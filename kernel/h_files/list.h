@@ -7,7 +7,7 @@
 #define offset(struct_type, member)\
 	(int)(&((struct_type*)0)->member)
 
-/* ? */
+/* 根据一个结构体中的成员地址来获取该结构体的地址 */
 #define elem2entry(struct_type, struct_member_name, elem_ptr)\
 	(struct_type*)((int)elem_ptr - offset(struct_type, struct_member_name))
 

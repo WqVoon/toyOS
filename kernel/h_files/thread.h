@@ -84,6 +84,8 @@ typedef struct __task_struct {
 	uint32_t* pgdir;
 	// 进程自己的虚拟地址池
 	virtual_addr userprog_vaddr;
+	// 进程自己的内存块描述符
+	mem_block_desc u_block_desc[DESC_CNT];
 	// 魔数，用于检测 PCB 信息是否被损坏
 	uint32_t stack_magic;
 } task_struct;
