@@ -90,7 +90,10 @@ typedef struct __task_struct {
 	uint32_t stack_magic;
 } task_struct;
 
-task_struct* thread_start(char*, int, thread_func, void*);
+
+task_struct* thread_start(
+	char* name, int prio, thread_func function, void* func_arg
+);
 task_struct* running_thread();
 void thread_init(void);
 void schedule(void);

@@ -12,30 +12,37 @@
 #include "syscall.h"
 #include "stdio.h"
 
+void thread_task(void*);
 void process_task(void);
 
 int main(void) {
 	init_all();
 	intr_enable();
 
-	void* ptr = malloc(33);
 	/*
-	根据内存管理策略，如果下面的 malloc(34) 的注释保留，那么两次申请的内存应该在同一个虚拟地址
-	因为 free 被执行时，内存对应的 arena 会被整体释放
-	如果去掉注释，那么两次应该相差 64Byte ，因为被释放的内存在 free_list 的末尾
+	由于内核线程应该共享同一份虚拟地址池，
+	所以 main, thread-a, thread-b 共计 5 次的申请得到的地址应该呈累加关系
+	而每个用户进程有自己的虚拟地址池，所以不同进程申请得到的虚拟地址有可能相同
 	*/
-	// ptr = malloc(34);
-	printf("First  malloc addr: %x\n", ptr);
-	free(ptr);
-	printf("Second malloc addr: %x\n", malloc(63));
+	printf("Main     addr: %x\n", malloc(33));
+	thread_start("thread-a", 31, thread_task, NULL);
+	thread_start("thread-b", 31, thread_task, NULL);
+	process_execute(process_task, "process-a");
+	process_execute(process_task, "process-b");
 
 	while(1);
 	return 0;
 }
 
+void thread_task(void* arg) {
+	printf("Thread  addr1: %x\n", malloc(33));
+	printf("Thread  addr2: %x\n", malloc(33));
+}
+
 void process_task(void) {
 	/* 下面的 console_put_str 会引发 GP 异常 */
 	// console_put_str("Wahahaha");
-	printf("%s pid: %d\n", "User process", -1 * getpid());
+	printf("Process addr1: %x\n", malloc(33));
+	printf("Process addr2: %x\n", malloc(33));
 	while (1);
 }
