@@ -12,12 +12,17 @@
 #include "syscall.h"
 #include "stdio.h"
 
+void process_task(void);
+
 int main(void) {
 	init_all();
 	intr_enable();
-
-	printf("Disk cnt: %d\n", *(char*)0x475);
+	process_execute(process_task, "process");
 
 	while(1);
 	return 0;
+}
+
+void process_task(void) {
+	while (1);
 }

@@ -3,6 +3,10 @@
 
 #include "stdint.h"
 
+uint32_t sprintf(char* str, const char* format, ...);
+
 uint32_t printf(const char* format, ...);
+
+void printk(const char* format, ...);
 
 #endif

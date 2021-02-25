@@ -6,6 +6,7 @@
 #include "console.h"
 #include "keyboard.h"
 #include "syscall.h"
+#include "ide.h"
 
 extern void timer_init(void);
 extern void tss_init();
@@ -23,4 +24,5 @@ void init_all() {
 	keyboard_init();
 	tss_init();
 	syscall_init();
+	ide_init();
 }

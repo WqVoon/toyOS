@@ -1,6 +1,7 @@
 #include "syscall.h"
 #include "string.h"
 #include "debug.h"
+#include "console.h"
 
 // printf 字符缓冲区的大小
 #define BUF_SIZE 1024
@@ -83,6 +84,15 @@ uint32_t vsprintf(char* str, const char* format, va_list ap) {
 	return strlen(str);
 }
 
+/* 对 vsprintf 的封装 */
+uint32_t sprintf(char* str, const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	uint32_t ret = vsprintf(str, format, args);
+	va_end(args);
+	return ret;
+}
+
 /* 格式化输出字符串 format */
 uint32_t printf(const char* format, ...) {
 	va_list args;
@@ -91,4 +101,14 @@ uint32_t printf(const char* format, ...) {
 	vsprintf(buf, format, args);
 	va_end(args);
 	return write(buf);
+}
+
+/* 供内核使用的输出函数，因此不需要系统调用 */
+void printk(const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	char buf[BUF_SIZE] = {0};
+	vsprintf(buf, format, args);
+	va_end(args);
+	console_put_str(buf);
 }
