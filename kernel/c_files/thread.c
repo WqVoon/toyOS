@@ -17,6 +17,8 @@ struct list thread_ready_list;
 struct list thread_all_list;
 // 用于保存队列中的线程结点
 static struct list_elem* thread_tag;
+// idle 线程
+task_struct* idle_thread;
 
 extern void switch_to(task_struct* cur, task_struct* next);
 
@@ -116,7 +118,6 @@ task_struct* thread_start(
 static void make_main_thread(void) {
 	main_thread = running_thread();
 	init_thread(main_thread, "main", 31);
-
 	ASSERT(!elem_find(&thread_all_list, &main_thread->all_list_tag));
 	list_append(&thread_all_list, &main_thread->all_list_tag);
 }
@@ -130,6 +131,10 @@ void schedule(void) {
 		// 如果线程只是 cpu 时间片到了，将其加入就绪队列尾部
 		ASSERT(! elem_find(&thread_ready_list, &cur->general_tag));
 		list_append(&thread_ready_list, &cur->general_tag);
+		// 下面三行代码用于营造 ready_list 为空的环境，从而测试 idle 线程
+		if (cur != idle_thread) {
+			list_remove(&cur->general_tag);
+		}
 		cur->ticks = cur->priority;
 		cur->status = TASK_READY;
 	} else {
@@ -138,8 +143,9 @@ void schedule(void) {
 		// 不需要将其加入队列，因为当前线程不在就绪队列中
 	}
 
-	// 避免就绪队列为空的情况
-	ASSERT(! list_empty(&thread_ready_list));
+	if (list_empty(&thread_ready_list)) {
+		thread_unblock(idle_thread);
+	}
 	// 获取队列队首的 elem
 	thread_tag = NULL;
 	thread_tag = list_pop(&thread_ready_list);
@@ -153,6 +159,17 @@ void schedule(void) {
 	switch_to(cur, next);
 }
 
+/* 系统空闲时运行的任务 */
+static void idle(void* arg) {
+	while (1) {
+		thread_block(TASK_BLOCKED);
+		__asm__ __volatile__ (
+			"sti; hlt"
+			::: "memory"
+		);
+	}
+}
+
 /* 初始化线程环境 */
 void thread_init(void) {
 	put_str("thread_init start\n");
@@ -160,6 +177,7 @@ void thread_init(void) {
 	list_init(&thread_all_list);
 	lock_init(&pid_lock);
 	make_main_thread();
+	idle_thread = thread_start("idle", 10, idle, NULL);
 	put_str("thread_init done\n");
 }
 
@@ -199,5 +217,16 @@ void thread_unblock(task_struct* pthread) {
 	list_push(&thread_ready_list, &pthread->general_tag);
 	pthread->status = TASK_READY;
 
+	intr_set_status(old_status);
+}
+
+/* 主动让出 cpu，换其他线程运行 */
+void thread_yeild(void) {
+	task_struct* cur = running_thread();
+	intr_status old_status = intr_disable();
+	ASSERT(! elem_find(&thread_ready_list, &cur->general_tag));
+	list_append(&thread_ready_list, &cur->general_tag);
+	cur->status = TASK_READY;
+	schedule();
 	intr_set_status(old_status);
 }

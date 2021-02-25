@@ -17,9 +17,10 @@ void process_task(void);
 int main(void) {
 	init_all();
 	intr_enable();
-	process_execute(process_task, "process");
 
-	while(1);
+	while(1) {
+		printk("Can u see me?\n");
+	}
 	return 0;
 }
 
