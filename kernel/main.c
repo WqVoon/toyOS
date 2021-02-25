@@ -18,9 +18,7 @@ int main(void) {
 	init_all();
 	intr_enable();
 
-	while(1) {
-		printk("Can u see me?\n");
-	}
+	while(1);
 	return 0;
 }
 

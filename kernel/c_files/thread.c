@@ -131,10 +131,6 @@ void schedule(void) {
 		// 如果线程只是 cpu 时间片到了，将其加入就绪队列尾部
 		ASSERT(! elem_find(&thread_ready_list, &cur->general_tag));
 		list_append(&thread_ready_list, &cur->general_tag);
-		// 下面三行代码用于营造 ready_list 为空的环境，从而测试 idle 线程
-		if (cur != idle_thread) {
-			list_remove(&cur->general_tag);
-		}
 		cur->ticks = cur->priority;
 		cur->status = TASK_READY;
 	} else {

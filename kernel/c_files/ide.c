@@ -1,5 +1,7 @@
+#include "io.h"
 #include "ide.h"
 #include "stdio.h"
+#include "timer.h"
 
 /* 定义硬盘各寄存器的端口号 */
 // 命令块寄存器们
@@ -64,6 +66,177 @@ uint8_t channel_cnt;
 // 有两个 ide 通道
 ide_channel channels[2];
 
+/* 选择读写的硬盘 */
+static void select_disk(disk* hd) {
+	uint8_t reg_device = BIT_DEV_MBS | BIT_DEV_LBA;
+	// 若为从盘就置 DEV 为 1
+	if (hd->dev_no == 1) {
+		reg_device |= BIT_DEV_DEV;
+	}
+	outb(reg_dev(hd->my_channel), reg_device);
+}
+
+/* 向硬盘控制器写入起始扇区地址及要读写的扇区数，当 sec_cnt 为 0 时表示 256 个扇区 */
+static void select_sector(disk* hd, uint32_t lba, uint8_t sec_cnt) {
+	ASSERT(lba <= max_lba);
+
+	ide_channel* channel = hd->my_channel;
+
+	// 写入要读取的扇区数
+	outb(reg_sect_cnt(channel), sec_cnt);
+
+	// 写入 lba 地址
+	outb(reg_lba_l(channel), lba);
+	outb(reg_lba_m(channel), lba >> 8);
+	outb(reg_lba_h(channel), lba >> 16);
+	outb(reg_dev(channel), BIT_DEV_MBS | BIT_DEV_LBA | \
+	(hd->dev_no == 1? BIT_DEV_DEV : 0) | lba >> 24);
+}
+
+/* 向通道 channel 发送命令 cmd */
+static void cmd_out(ide_channel* channel, uint8_t cmd) {
+	// 只要向硬盘发送了命令就置为 1，方便中断处理程序
+	channel->expecting_intr = 1;
+	outb(reg_cmd(channel), cmd);
+}
+
+/* 将以扇区为单位的存储空间转换为以字节为单位 */
+static uint32_t sec_cnt2size_in_byte(uint8_t sec_cnt) {
+	uint32_t size_in_byte;
+	if (sec_cnt == 0) {
+		size_in_byte = 256 * 512;
+	} else {
+		size_in_byte = sec_cnt * 512;
+	}
+	return size_in_byte;
+}
+
+/* 硬盘读入 sec_cnt 个扇区到 buf，假设扇区大小为 512 字节 */
+static void read_from_sector(disk* hd, void* buf, uint8_t sec_cnt) {
+	uint32_t size_in_byte = sec_cnt2size_in_byte(sec_cnt);
+	insw(reg_data(hd->my_channel), buf, size_in_byte / 2);
+}
+
+/* 将 buf 中 sec_cnt 扇区的数据写入硬盘 */
+static void write2sector(disk* hd, void* buf, uint8_t sec_cnt) {
+	uint32_t size_in_byte = sec_cnt2size_in_byte(sec_cnt);
+	outsw(reg_data(hd->my_channel), buf, size_in_byte / 2);
+}
+
+/* 等待 30 秒，因为据说硬盘处理请求最多花费 31 秒 */
+static bool busy_wait(disk* hd) {
+	ide_channel* channel = hd->my_channel;
+	uint16_t time_limit = 30 * 1000;
+	while (time_limit -= 10 >= 0) {
+		if (! (inb(reg_status(channel)) & BIT_ALT_STAT_BSY)) {
+			return (inb(reg_status(channel)) & BIT_ALT_STAT_DRQ);
+		} else {
+			mtime_sleep(10);
+		}
+	}
+	return 0;
+}
+
+/* 从硬盘读取 sec_cnt 个扇区到 buf */
+void ide_read(disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt) {
+	ASSERT(lba <= max_lba);
+	ASSERT(sec_cnt > 0);
+	lock_acquire(&hd->my_channel->lock);
+
+	// 先选择要操作的硬盘
+	select_disk(hd);
+
+	// 要操作的总扇区数
+	uint32_t secs_op;
+	// 已经完成的扇区数
+	uint32_t secs_done = 0;
+	while (secs_done < sec_cnt) {
+		if ((secs_done + 256) <= sec_cnt) {
+			secs_op = 256;
+		} else {
+			secs_op = sec_cnt - secs_done;
+		}
+
+		// 写入待读取的扇区数和起始扇区号码
+		select_sector(hd, lba + secs_done, secs_op);
+
+		// 写入读命令
+		cmd_out(hd->my_channel, CMD_READ_SECTOR);
+
+		// 将当前线程阻塞，直到硬盘完成读操作后唤醒自己
+		sema_down(&hd->my_channel->disk_done);
+
+		if (! busy_wait(hd)) {
+			// 如果读取失败
+			printk("%s read sector %d failed", hd->name, lba);
+			intr_disable();
+			while (1);
+		}
+
+		read_from_sector(hd, (void*)((uint32_t)buf + secs_done * 512), secs_op);
+		secs_done += secs_op;
+	}
+	lock_release(&hd->my_channel->lock);
+}
+
+/* 将 buf 中 sec_cnt 扇区数据写入硬盘 */
+void ide_write(disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt) {
+	ASSERT(lba <= max_lba);
+	ASSERT(sec_cnt > 0);
+	lock_acquire(&hd->my_channel->lock);
+
+	// 先选择操作的硬盘
+	select_disk(hd);
+
+	uint32_t secs_op;
+	uint32_t secs_done = 0;
+	while (secs_done < sec_cnt) {
+		if ((secs_done + 256) <= sec_cnt) {
+			secs_op = 256;
+		} else {
+			secs_op = sec_cnt - secs_done;
+		}
+
+		select_sector(hd, lba + secs_done, secs_op);
+
+		cmd_out(hd->my_channel, CMD_WRITE_SECTOR);
+
+		if (! busy_wait(hd)) {
+			// 如果硬盘当前不可写
+			printk("%s read sector %d failed", hd->name, lba);
+			intr_disable();
+			while (1);
+		}
+
+		write2sector(hd, (void*)((uint32_t)buf + secs_done * 512), secs_op);
+
+		sema_down(&hd->my_channel->disk_done);
+		secs_done += secs_op;
+	}
+}
+
+/* 硬盘中断处理程序 */
+void intr_hd_handler(uint8_t irq_no) {
+	ASSERT(irq_no == 0x2e || irq_no == 0x2f);
+	uint8_t ch_no = irq_no - 0x2e;
+	ide_channel* channel = &channels[ch_no];
+	ASSERT(channel->irq_no == irq_no);
+
+	if (channel->expecting_intr) {
+		channel->expecting_intr = 0;
+		sema_up(&channel->disk_done);
+
+		/*
+		读取状态寄存器使硬盘控制器认为此次中断已被处理，从而可以继续读写
+		硬盘的中断在下列情况下会被清掉
+		 1.读取了 status 寄存器
+		 2.发出了 reset 命令
+		 3.又向 reg_cmd 写入了新的命令
+		*/
+		inb(reg_status(channel));
+	}
+}
+
 /* 硬盘数据结构初始化 */
 void ide_init() {
 	printk("ide_init start\n");
@@ -103,6 +276,7 @@ void ide_init() {
 		*/
 		sema_init(&channel->disk_done, 0);
 
+		register_handler(channel->irq_no, intr_hd_handler);
 		channel_no++;
 	}
 	printk("ide_init done\n");

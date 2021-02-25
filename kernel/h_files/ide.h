@@ -70,4 +70,8 @@ typedef struct __ide_channel {
 
 void ide_init();
 
+void ide_read(disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt);
+
+void ide_write(disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt);
+
 #endif
