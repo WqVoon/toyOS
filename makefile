@@ -26,23 +26,25 @@ KERNEL_LIB_C_FUNCS_DST=kernel/c_files/*.o
 # 内核镜像文件
 KERNEL_IMG=kernel/kernel.bin
 # 写入的镜像文件
-IMG_FILE=hd60M.img
+MASTER_IMG_FILE=hd60M.img
+SLAVE_IMG_FILE=hd80M.img
 
 make_img:
-	@bximage -mode=create -hd=60M -q $(IMG_FILE) && echo "Make IMG File"
+	@bximage -mode=create -hd=60M -q $(MASTER_IMG_FILE) && echo "Make Master IMG File"
+	@bximage -mode=create -hd=80M -q $(SLAVE_IMG_FILE) && echo "Make Slave IMG File"
 
 compile: compile_mbr compile_loader compile_kernel
 	@echo "Done"
 
 compile_mbr: $(MBR_FILE)
-	@[ -e $(IMG_FILE) ] || make make_img
+	@[ -e $(MASTER_IMG_FILE) ] || make make_img
 	@nasm $(MBR_FILE) \
-		&& dd if=$(MBR_TMP_FILE) of=$(IMG_FILE) bs=512 count=1 conv=notrunc,sync \
+		&& dd if=$(MBR_TMP_FILE) of=$(MASTER_IMG_FILE) bs=512 count=1 conv=notrunc,sync \
 		&& echo "Compile MBR"
 
 compile_loader: $(LOADER_FILE)
 	@nasm $(LOADER_FILE) \
-		&& dd if=$(LOADER_TMP_FILE) of=$(IMG_FILE) bs=512 count=4 seek=2 conv=notrunc,sync \
+		&& dd if=$(LOADER_TMP_FILE) of=$(MASTER_IMG_FILE) bs=512 count=4 seek=2 conv=notrunc,sync \
 		&& echo "Compile Loader"
 
 compile_asm: $(KERNEL_LIB_ASM_FUNCS_SRC)
@@ -57,7 +59,7 @@ compile_kernel: compile_c compile_asm
 	@$(GCC) -std=c99 -fno-builtin -m32 -I $(KERNEL_LIB_HEADERS) -c -o $(KERNEL_TMP_FILE) $(KERNEL_FILE) \
 		&& $(LD) -m elf_i386 $(KERNEL_TMP_FILE) $(KERNEL_LIB_ASM_FUNCS_DST) $(KERNEL_LIB_C_FUNCS_DST) \
 			-Ttext 0xc0001500 -e main -o $(KERNEL_IMG) \
-		&& dd if=$(KERNEL_IMG) of=$(IMG_FILE) bs=512 count=200 seek=9 conv=notrunc,sync \
+		&& dd if=$(KERNEL_IMG) of=$(MASTER_IMG_FILE) bs=512 count=200 seek=9 conv=notrunc,sync \
 		&& echo "Compile kernel"
 
 run: clean compile
@@ -65,6 +67,6 @@ run: clean compile
 
 clean:
 	@echo "Clean"
-	@rm -f $(IMG_FILE) $(KERNEL_IMG) $(KERNEL_TMP_FILE) \
+	@rm -f $(MASTER_IMG_FILE) $(SLAVE_IMG_FILE) $(KERNEL_IMG) $(KERNEL_TMP_FILE) \
 		$(LOADER_TMP_FILE) $(MBR_TMP_FILE) \
 		$(KERNEL_LIB_ASM_FUNCS_DST) $(KERNEL_LIB_C_FUNCS_DST)
