@@ -31,7 +31,7 @@ SLAVE_IMG_FILE=hd80M.img
 
 make_img:
 	@bximage -mode=create -hd=60M -q $(MASTER_IMG_FILE) && echo "Make Master IMG File"
-	@bximage -mode=create -hd=80M -q $(SLAVE_IMG_FILE) && echo "Make Slave IMG File"
+	@[ -e $(SLAVE_IMG_FILE) ] || bximage -mode=create -hd=80M -q $(SLAVE_IMG_FILE) && echo "Make Master IMG File"
 
 compile: compile_mbr compile_loader compile_kernel
 	@echo "Done"
@@ -67,6 +67,6 @@ run: clean compile
 
 clean:
 	@echo "Clean"
-	@rm -f $(MASTER_IMG_FILE) $(SLAVE_IMG_FILE) $(KERNEL_IMG) $(KERNEL_TMP_FILE) \
+	@rm -f $(MASTER_IMG_FILE) $(KERNEL_IMG) $(KERNEL_TMP_FILE) \
 		$(LOADER_TMP_FILE) $(MBR_TMP_FILE) \
 		$(KERNEL_LIB_ASM_FUNCS_DST) $(KERNEL_LIB_C_FUNCS_DST)

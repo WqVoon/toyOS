@@ -19,7 +19,7 @@ typedef struct {
 	// 分区所属的硬盘
 	disk* my_disk;
 	// 用于队列中的标记
-	struct list_elem* part_tag;
+	struct list_elem part_tag;
 	// 分区名称
 	char name[8];
 	// 本分区的超级块

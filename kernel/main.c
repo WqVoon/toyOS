@@ -1,3 +1,4 @@
+#include "ide.h"
 #include "sync.h"
 #include "string.h"
 #include "print.h"

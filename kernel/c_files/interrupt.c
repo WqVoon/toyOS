@@ -128,6 +128,8 @@ static void general_intr_handler(uint8_t vec_nr) {
 	put_str("!!!!! exception message begin !!!!!\n");
 	set_cursor(88);
 	put_str(intr_name[vec_nr]);
+	put_char(' ');
+	put_int(vec_nr);
 
 	// 如果为 Pagefault，那么打印出缺失的地址并悬停
 	if (vec_nr == 14) {
