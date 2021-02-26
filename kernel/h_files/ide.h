@@ -1,6 +1,7 @@
 #ifndef __KERNEL_IDE_H
 #define __KERNEL_IDE_H
 
+#include "super_block.h"
 #include "stdint.h"
 #include "bitmap.h"
 #include "debug.h"
@@ -23,7 +24,7 @@ typedef struct {
 	// 分区名称
 	char name[8];
 	// 本分区的超级块
-	// super_block* sb;
+	struct super_block* sb;
 	// 块位图
 	bitmap block_bitmap;
 	// i结点位图

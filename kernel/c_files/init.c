@@ -7,6 +7,7 @@
 #include "keyboard.h"
 #include "syscall.h"
 #include "ide.h"
+#include "fs.h"
 
 extern void timer_init(void);
 extern void tss_init();
@@ -18,11 +19,12 @@ void init_all() {
 	put_str("init_all\n");
 	idt_init();
 	mem_init();
+	console_init();
 	timer_init();
 	thread_init();
-	console_init();
 	keyboard_init();
 	tss_init();
 	syscall_init();
 	ide_init();
+	filesys_init();
 }
