@@ -6,6 +6,7 @@
 #include "memory.h"
 
 #define PG_SIZE 4096
+#define MAX_FILES_OPEN_PER_PROC 8
 
 /* 自定义的通用函数类型，将被用在很多线程函数中作为参数类型 */
 typedef void thread_func(void*);
@@ -74,6 +75,8 @@ typedef struct __task_struct {
 	uint32_t ticks;
 	// 任务从上 cpu 运行后至今一共占用了多少 ticks，只增不减
 	uint32_t elapsed_ticks;
+	// 一个任务打开的文件描述符数组，最大数量定义为下面的宏
+	int32_t fd_table[MAX_FILES_OPEN_PER_PROC];
 	// 其他 list 中的结点标记，用于表示此任务当前的状态
 	// 比如若该标记在 thread_ready_list 中则表示当前任务出于就绪状态
 	struct list_elem general_tag;

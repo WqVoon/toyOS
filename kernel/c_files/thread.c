@@ -91,6 +91,16 @@ void init_thread(task_struct* pthread, char* name, int prio) {
 	pthread->pgdir = NULL;
 	// 当前线程在内核态下使用的栈顶地址
 	pthread->self_kstack = (uint32_t*)((uint32_t)pthread + PG_SIZE);
+
+	// 定义 stdin, stdout, stderr
+	pthread->fd_table[0] = 0;
+	pthread->fd_table[1] = 1;
+	pthread->fd_table[2] = 2;
+	// 其余的置为 -1
+	for (int i=3; i<MAX_FILES_OPEN_PER_PROC; i++) {
+		pthread->fd_table[i] = -1;
+	}
+
 	// 用于检测边界的魔数，避免压栈操作破坏 PCB 的基本信息
 	pthread->stack_magic = *((uint32_t*) "iLym");
 }
