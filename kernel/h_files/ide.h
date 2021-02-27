@@ -13,6 +13,7 @@ typedef struct __ide_channel ide_channel;
 
 /* 分区结构 */
 typedef struct {
+	/* 下面的内容在分区被扫描后会被填写 */
 	// 起始扇区
 	uint32_t start_lba;
 	//扇区数
@@ -23,6 +24,8 @@ typedef struct {
 	struct list_elem part_tag;
 	// 分区名称
 	char name[8];
+
+	/* 下面的内容在分区被挂载后会被填写 */
 	// 本分区的超级块
 	struct super_block* sb;
 	// 块位图

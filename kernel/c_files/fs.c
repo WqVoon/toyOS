@@ -151,6 +151,66 @@ static void partition_format(partition* part) {
 	sys_free(buf);
 }
 
+// TODO: 默认情况下操作的是哪个分区（有啥用？）
+partition* cur_part;
+// sys_malloc 返回失败的错误信息
+const char* malloc_error = "malloc memory failed!";
+/* 在分区链表中找到名为 part_name 的分区，并将其指针赋值给 cur_part */
+static bool mount_partition(struct list_elem* pelem, int arg) {
+	char* part_name = (char*) arg;
+	partition* part = elem2entry(partition, part_tag, pelem);
+	if (strcmp(part->name, part_name)) {
+		// 返回 0 来使 list_traversal 继续扫描
+		return 0;
+	}
+
+	cur_part = part;
+	disk* hd = part->my_disk;
+
+/* 处理超级块 */
+	struct super_block* sb_buf = cur_part->sb = sys_malloc(SECTOR_SIZE);
+	if (sb_buf == NULL) {
+		ASSERT(! malloc_error);
+	}
+	ide_read(hd, cur_part->start_lba + 1, sb_buf, 1);
+
+/* 处理块位图 */
+	cur_part->block_bitmap.bits =\
+	sys_malloc(sb_buf->block_bitmap_sects * SECTOR_SIZE);
+	if (cur_part->block_bitmap.bits == NULL) {
+		ASSERT(! malloc_error);
+	}
+
+	cur_part->block_bitmap.btmp_bytes_len =\
+	sb_buf->block_bitmap_sects * SECTOR_SIZE;
+	ide_read(
+		hd, sb_buf->block_bitmap_lba,
+		cur_part->block_bitmap.bits,
+		sb_buf->block_bitmap_sects
+	);
+
+/* 处理 inode 位图 */
+	cur_part->inode_bitmap.bits =\
+	sys_malloc(sb_buf->inode_bitmap_sects * SECTOR_SIZE);
+	if (cur_part->inode_bitmap.bits == NULL) {
+		ASSERT(! malloc_error);
+	}
+
+	cur_part->inode_bitmap.btmp_bytes_len =\
+	sb_buf->inode_bitmap_sects * SECTOR_SIZE;
+	ide_read(
+		hd, sb_buf->inode_bitmap_lba,
+		cur_part->inode_bitmap.bits,
+		sb_buf->inode_bitmap_sects
+	);
+
+	list_init(&cur_part->open_inodes);
+	printk("mount %s done!\n", part->name);
+
+	// 返回 1 来使 list_traversal 停止
+	return 1;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};
@@ -164,6 +224,8 @@ static bool for_each_partition(struct list_elem* tag, int unused) {
 	} else {
 		partition_format(part);
 	}
+
+	return 0;
 }
 
 extern struct list partition_list;
@@ -172,4 +234,5 @@ extern struct list partition_list;
 void filesys_init() {
 	printk("searching filesystem...\n");
 	list_traversal(&partition_list, for_each_partition, 0);
+	list_traversal(&partition_list, mount_partition, (int)"sdb1");
 }
