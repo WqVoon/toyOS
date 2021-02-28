@@ -22,7 +22,7 @@ dir* dir_open(partition* part, uint32_t inode_no) {
 	return pdir;
 }
 
-/* 在分区 part 中的 pdir 目录内寻找名为 name 的目录，找到会赋值给 dir_e 并返回 1，否则返回 0*/
+/* 在分区 part 中的 pdir 目录内寻找名为 name 的目录项，找到会赋值给 dir_e 并返回 1，否则返回 0*/
 bool search_dir_entry(
 	partition* part, dir* pdir,
 	const char* name, dir_entry* dir_e

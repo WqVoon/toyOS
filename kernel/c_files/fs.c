@@ -248,6 +248,74 @@ uint32_t path_depth_cnt(char* pathname) {
 	return depth;
 }
 
+extern dir root_dir;
+/* 搜索文件 pathname，若找到则返回其 inode 号，否则返回 -1 */
+static int search_file(const char* pathname, path_search_record* searched_record) {
+	// 如果待查找的是根目录，那么直接返回已知的根目录信息
+	if (!strcmp(pathname, "/") || !strcmp(pathname, "/.") || !strcmp(pathname, "/..")) {
+		searched_record->parent_dir = &root_dir;
+		searched_record->file_type = FT_DIRECTORY;
+		searched_record->searched_path[0] = 0;
+		return 0;
+	}
+
+	uint32_t path_len = strlen(pathname);
+	// 保证 pathname 至少是这样的路径 /x，且小于最大长度
+	ASSERT(pathname[0] == '/' && path_len > 1 && path_len < MAX_PATH_LEN);
+	char* sub_path = (char*)pathname;
+	dir* parent_dir = &root_dir;
+	dir_entry dir_e;
+
+	// 记录路径解析出来的各级名称，如 /a/b/c 那么每次拆分出的值分别是 a, b, c
+	char name[MAX_FILE_NAME_LEN] = {0};
+
+	searched_record->parent_dir = parent_dir;
+	searched_record->file_type = FT_UNKNOWN;
+	uint32_t parent_inode_no = 0;
+
+	sub_path = path_parse(sub_path, name);
+	while (name[0]) {
+		ASSERT(strlen(searched_record->searched_path) < MAX_PATH_LEN);
+
+		//记录已经存在的父目录
+		strcat(searched_record->searched_path, "/");
+		strcat(searched_record->searched_path, name);
+
+		if (search_dir_entry(cur_part, parent_dir, name, &dir_e)) {
+			memset(name, 0, MAX_FILE_NAME_LEN);
+
+			// 如果 sub_path 不为 NULL，那么继续拆分路径
+			if (sub_path) {
+				sub_path = path_parse(sub_path, name);
+			}
+
+			if (FT_DIRECTORY == dir_e.f_type) {
+				// 如果被打开的是目录
+				parent_inode_no = parent_dir->inode->i_no;
+				dir_close(parent_dir);
+				searched_record->parent_dir = parent_dir = dir_open(cur_part, dir_e.i_no);
+			} else if (FT_REGULAR == dir_e.f_type) {
+				// 如果是普通文件
+				searched_record->file_type = FT_REGULAR;
+				return dir_e.i_no;
+			}
+		} else {
+			// TODO: 如果没找到那么直接返回 -1，但先不关闭 parent_dir，方便创建文件
+			return -1;
+		}
+	}
+
+	/*
+	如果能执行到这里，那么说明遍历完了全部路径，并且查找的文件或目录只有同名目录存在
+	此时 searched_record->parent_dir 是最后一级目录，所以需要将其更新成倒数第二级的目录
+	*/
+	dir_close(searched_record->parent_dir);
+
+	searched_record->parent_dir = dir_open(cur_part, parent_inode_no);
+	searched_record->file_type = FT_DIRECTORY;
+	return dir_e.i_no;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};
