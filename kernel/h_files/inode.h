@@ -1,6 +1,7 @@
 #ifndef __INODE_H
 #define __INODE_H
 
+#include "ide.h"
 #include "list.h"
 #include "stdint.h"
 
@@ -23,5 +24,10 @@ typedef struct {
 	// 用于加入 "已打开的 inode 列表"，该列表做缓存用，避免多次读盘
 	struct list_elem inode_tag;
 } inode;
+
+void inode_sync(partition* part, inode* in, void* io_buf);
+inode* inode_open(partition* part, uint32_t inode_no);
+void inode_close(inode* inode);
+void inode_init(uint32_t inode_no, inode* new_inode);
 
 #endif
