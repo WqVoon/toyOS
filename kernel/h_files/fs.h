@@ -1,6 +1,8 @@
 #ifndef __FS_H
 #define __FS_H
 
+#include "stdint.h"
+
 // 每个分区所支持的最大创建文件的数量
 #define MAX_FILES_PER_PART 4096
 // 每扇区的位数
@@ -19,6 +21,7 @@ typedef enum {
 	FT_DIRECTORY
 } file_types;
 
+uint32_t path_depth_cnt(char* pathname);
 void filesys_init();
 
 #endif

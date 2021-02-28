@@ -211,6 +211,43 @@ static bool mount_partition(struct list_elem* pelem, int arg) {
 	return 1;
 }
 
+/* 将最上层的路径名称解析出来，把名字保存在 name_store，并返回名字后面的位置 */
+static char* path_parse(char* pathname, char* name_store) {
+	if (pathname[0] == 0) return NULL;
+
+	// 根目录不需要单独解析，所以跳过所有的前缀 '/'
+	if (pathname[0] == '/') {
+		while (*(++pathname) == '/');
+	}
+
+	// 开始解析一般路径
+	while (*pathname != '/' && *pathname != 0) {
+		*name_store++ = *pathname++;
+	}
+
+	return pathname;
+}
+
+/* 返回路径的深度，比如 /a/b/c 的深度为 3 */
+uint32_t path_depth_cnt(char* pathname) {
+	ASSERT(pathname != NULL);
+	char*p = pathname;
+	// 用于 path_parse 的参数做路径解析
+	char name[MAX_FILE_NAME_LEN];
+
+	uint32_t depth = 0;
+
+	// 解析路径，从中拆分出各级名称
+	path_parse(p, name);
+	while (name[0]) {
+		depth++;
+		if (p) { // 如果 p 不等于 NULL，那么继续分析路径
+			p = path_parse(p, name);
+		}
+	}
+	return depth;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};
