@@ -12,12 +12,19 @@
 #include "process.h"
 #include "syscall.h"
 #include "stdio.h"
+#include "fs.h"
 
 void process_task(void);
 
 int main(void) {
 	init_all();
 	intr_enable();
+
+	if (sys_open("/toMyLove", O_CREAT) != -1) {
+		printk("create file successful\n");
+	} else {
+		printk("create file error\n");
+	}
 
 	while(1);
 	return 0;

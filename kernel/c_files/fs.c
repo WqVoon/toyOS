@@ -5,6 +5,7 @@
 #include "stdio.h"
 #include "inode.h"
 #include "list.h"
+#include "file.h"
 #include "ide.h"
 #include "dir.h"
 #include "fs.h"
@@ -57,17 +58,17 @@ static void partition_format(partition* part) {
 
 	printk(
 		"%s info:\n"
-		"   magic:                0x%x\n"
-		"   part_lba_base:        0x%x\n"
-		"   all_sectors:          0x%x\n"
-		"   inode_cnt:            0x%x\n"
-		"   block_bitmap_lba:     0x%x\n"
-		"   block_bitmap_sectors: 0x%x\n"
-		"   inode_bitmap_lba:     0x%x\n"
-		"   inode_bitmap_sectors: 0x%x\n"
-		"   inode_table_lba:      0x%x\n"
-		"   inode_table_sectors:  0x%x\n"
-		"   data_start_lba:       0x%x\n",
+		"   magic:                %x\n"
+		"   part_lba_base:        %x\n"
+		"   all_sectors:          %x\n"
+		"   inode_cnt:            %x\n"
+		"   block_bitmap_lba:     %x\n"
+		"   block_bitmap_sectors: %x\n"
+		"   inode_bitmap_lba:     %x\n"
+		"   inode_bitmap_sectors: %x\n"
+		"   inode_table_lba:      %x\n"
+		"   inode_table_sectors:  %x\n"
+		"   data_start_lba:       %x\n",
 		part->name, sb.magic, sb.part_lba_base,
 		sb.sec_cnt, sb.inode_cnt, sb.block_bitmap_lba,
 		sb.block_bitmap_sects, sb.inode_bitmap_lba,
@@ -230,7 +231,7 @@ static char* path_parse(char* pathname, char* name_store) {
 
 /* 返回路径的深度，比如 /a/b/c 的深度为 3 */
 uint32_t path_depth_cnt(char* pathname) {
-	ASSERT(pathname != NULL);
+	ASSERT(pathname[0] == '/' && pathname != NULL);
 	char*p = pathname;
 	// 用于 path_parse 的参数做路径解析
 	char name[MAX_FILE_NAME_LEN];
@@ -238,9 +239,10 @@ uint32_t path_depth_cnt(char* pathname) {
 	uint32_t depth = 0;
 
 	// 解析路径，从中拆分出各级名称
-	path_parse(p, name);
+	p = path_parse(p, name);
 	while (name[0]) {
 		depth++;
+		memset(name, 0, MAX_FILE_NAME_LEN);
 		if (p) { // 如果 p 不等于 NULL，那么继续分析路径
 			p = path_parse(p, name);
 		}
@@ -316,6 +318,68 @@ static int search_file(const char* pathname, path_search_record* searched_record
 	return dir_e.i_no;
 }
 
+/* 打开或创建文件成功后，返回文件描述符，否则返回 -1 */
+int32_t sys_open(const char* pathname, uint8_t flags) {
+	if (pathname[strlen(pathname)-1] == '/') {
+		printk("can't open a directory %s\n", pathname);
+		return -1;
+	}
+	ASSERT(flags <= 7);
+	int32_t fd = -1;
+
+	path_search_record searched_record;
+	memset(&searched_record, 0, sizeof(path_search_record));
+
+	uint32_t pathname_depth = path_depth_cnt((char*)pathname);
+
+	int inode_no = search_file(pathname, &searched_record);
+	bool found = (inode_no != -1);
+
+	if (searched_record.file_type == FT_DIRECTORY) {
+		printk("can't open a directory %s\n", pathname);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	uint32_t path_searched_depth = path_depth_cnt(searched_record.searched_path);
+
+	if (pathname_depth != path_searched_depth) {
+		printk(
+			"can not access %s: Not a directory, subpath %s is't exist\n",
+			pathname, searched_record.searched_path
+		);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	// 如果在最后一个路径没找到，并且不是要创建文件，那么直接返回 -1
+	if (!found && !(flags & O_CREAT)) {
+		printk(
+			"in path %s, file %s is't exist\n",
+			searched_record.searched_path,
+			(strrchr(searched_record.searched_path, '/') + 1)
+		);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	} else if (found && flags & O_CREAT) {
+		printk("%s has already exist\n", pathname);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	// TODO: 这个 switch 为什么不换成 if
+	switch (flags & O_CREAT) {
+	case O_CREAT:
+		printk("creating file\n");
+		fd = file_create(searched_record.parent_dir, (strrchr(pathname, '/')+1), flags);
+		dir_close(searched_record.parent_dir);
+	// 其余为打开文件
+	}
+
+	// 此 fd 是指任务 pcb->file_table 数组中的下标，而不是全局 file_table 的下标
+	return fd;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};
@@ -334,10 +398,18 @@ static bool for_each_partition(struct list_elem* tag, int unused) {
 }
 
 extern struct list partition_list;
-
+extern file file_table[MAX_FILE_OPEN];
 /* 在磁盘上搜索文件系统，若没有则格式化分区来创建之 */
 void filesys_init() {
 	printk("searching filesystem...\n");
+	// 格式化硬盘中的每个分区
 	list_traversal(&partition_list, for_each_partition, 0);
+	// 将 sdb1 挂载到内存
 	list_traversal(&partition_list, mount_partition, (int)"sdb1");
+	// 打开挂载的分区的根目录
+	open_root_dir(cur_part);
+	// 初始化文件表
+	for(int i=0; i<MAX_FILE_OPEN; i++) {
+		file_table[i].fd_inode = NULL;
+	}
 }

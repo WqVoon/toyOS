@@ -2,7 +2,9 @@
 #define __FS_H
 
 #include "stdint.h"
-#include "dir.h"
+
+// 前向引用
+typedef struct __dir  dir;
 
 // 每个分区所支持的最大创建文件的数量
 #define MAX_FILES_PER_PART 4096
@@ -46,6 +48,7 @@ typedef struct {
 	file_types file_type;
 } path_search_record;
 
+int32_t sys_open(const char* pathname, uint8_t flags);
 uint32_t path_depth_cnt(char* pathname);
 void filesys_init();
 

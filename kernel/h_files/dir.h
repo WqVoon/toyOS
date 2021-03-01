@@ -9,7 +9,7 @@
 #define MAX_FILE_NAME_LEN 16
 
 /* 目录结构 */
-typedef struct {
+typedef struct __dir {
 	inode* inode;
 	// 记录在目录内的偏移
 	uint32_t dir_pos;
