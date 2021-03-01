@@ -123,7 +123,12 @@ int32_t file_create(dir* parent_dir, char* filename, uint8_t flag) {
 	file_table[fd_idx].fd_inode = new_file_inode;
 	file_table[fd_idx].fd_pos = 0;
 	file_table[fd_idx].fd_flag = flag;
-	file_table[fd_idx].fd_inode->write_deny = 0;
+	if (flag & O_WRONLY || flag & O_RDWR) {
+		// 只要有可能写文件，就考虑是否有其他进程也在写
+		intr_status old_status = intr_disable();
+		file_table[fd_idx].fd_inode->write_deny = 1;
+		intr_set_status(old_status);
+	}
 
 	dir_entry new_dir_entry;
 	memset(&new_dir_entry, 0, sizeof(dir_entry));

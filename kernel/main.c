@@ -28,6 +28,8 @@ int main(void) {
 	这里验证了原书存在的一个 bug
 		在创建新文件时如果带有可写的模式，那么它不会对 write_deny 置位
 		这样就在同一时刻同一文件有两个可写的文件描述符
+
+	此时修复后，因为最初的 fd 没有关闭，后续两次对文件的写模式打开都无法成功
 	*/
 	printf("\nfd0:\n");
 	int fd = open_file_with_tip("/toMyLove", O_CREAT|O_WRONLY);
