@@ -21,32 +21,29 @@ int main(void) {
 	init_all();
 	intr_enable();
 
-	const char* title = "To Lym:\n";
-	const char* msg   = "  I love u\n";
+	const char* msg = "To Lym:\n I love u\n";
+	uint32_t msg_len = strlen(msg);
+	void* buf = sys_malloc(512);
 
-	/*
-	这里验证了原书存在的一个 bug
-		在创建新文件时如果带有可写的模式，那么它不会对 write_deny 置位
-		这样就在同一时刻同一文件有两个可写的文件描述符
+	int wr_fd = open_file_with_tip("/ToMyLove", O_CREAT|O_WRONLY);
+	sys_write(wr_fd, msg, msg_len);
 
-	此时修复后，因为最初的 fd 没有关闭，后续两次对文件的写模式打开都无法成功
-	*/
-	printf("\nfd0:\n");
-	int fd = open_file_with_tip("/toMyLove", O_CREAT|O_WRONLY);
+	int rd_fd1 = open_file_with_tip("/ToMyLove", O_RDONLY);
+	printk("-----\n");
+	printk("1.read %d bytes\n", sys_read(rd_fd1, buf, 10));
+	printk("2.read %d bytes\n", sys_read(rd_fd1, buf+10, 10));
+	printk("3.read %d bytes\n", sys_read(rd_fd1, buf+10, 10));
+	*((char*)buf + msg_len) = 0;
+	printk("-----\n%s\n", buf);
 
-	printf("\nfd1:\n");
-	fd = open_file_with_tip("/toMyLove", O_RDWR);
-	sys_write(fd, title, strlen(title));
+	int rd_fd2 = open_file_with_tip("/ToMyLove", O_RDONLY);
+	memset(buf, 0, msg_len);
+	sys_read(rd_fd2, buf, msg_len);
+	printk("-----\n%s", buf);
 
-	printf("\nfd2:\n");
-	fd = open_file_with_tip("/toMyLove", O_RDWR);
-	sys_write(fd, msg, strlen(msg));
-	close_file_with_tip(fd);
-
-	printf("\nfd3:\n");
-	fd = open_file_with_tip("/toMyLove", O_RDONLY);
-	sys_write(fd, msg, strlen(msg));
-	close_file_with_tip(fd);
+	close_file_with_tip(wr_fd);
+	close_file_with_tip(rd_fd1);
+	close_file_with_tip(rd_fd2);
 
 	while(1);
 	return 0;

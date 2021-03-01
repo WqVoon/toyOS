@@ -38,5 +38,6 @@ int32_t file_create(dir* parent_dir, char* filename, uint8_t flag);
 int32_t file_open(uint32_t inode_no, uint8_t flag);
 int32_t file_close(file* file);
 int32_t file_write(file* file, const void*buf, uint32_t count);
+int32_t file_read(file* file, void* buf, uint32_t count);
 
 #endif
