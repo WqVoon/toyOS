@@ -167,3 +167,31 @@ rollback:
 	sys_free(io_buf);
 	return -1;
 }
+
+/* 打开编号为 inode_no 的 inode 对应的文件，成功返回描述符，否则返回 -1 */
+int32_t file_open(uint32_t inode_no, uint8_t flag) {
+	int fd_idx = get_free_slot_in_global();
+	if (fd_idx == -1) {
+		printk("exceed max open files\n");
+		return -1;
+	}
+
+	file_table[fd_idx].fd_inode = inode_open(cur_part, inode_no);
+	file_table[fd_idx].fd_pos = 0;
+	file_table[fd_idx].fd_flag = flag;
+	bool* write_deny = &file_table[fd_idx].fd_inode->write_deny;
+
+	if (flag & O_WRONLY || flag & O_RDWR) {
+		// 只要有可能写文件，就考虑是否有其他进程也在写
+		intr_status old_status = intr_disable();
+		if (! (*write_deny)) {
+			*write_deny = 1;
+			intr_set_status(old_status);
+		} else {
+			intr_set_status(old_status);
+			printk("file can not be write now, try again later\n");
+			return -1;
+		}
+	}
+	return pcb_fd_install(fd_idx);
+}

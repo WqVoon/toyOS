@@ -374,6 +374,8 @@ int32_t sys_open(const char* pathname, uint8_t flags) {
 		fd = file_create(searched_record.parent_dir, (strrchr(pathname, '/')+1), flags);
 		dir_close(searched_record.parent_dir);
 	// 其余为打开文件
+	default:
+		fd = file_open(inode_no, flags);
 	}
 
 	// 此 fd 是指任务 pcb->file_table 数组中的下标，而不是全局 file_table 的下标
