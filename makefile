@@ -31,7 +31,9 @@ SLAVE_IMG_FILE=hd80M.img
 
 make_img:
 	@bximage -mode=create -hd=60M -q $(MASTER_IMG_FILE) && echo "Make Master IMG File"
-	@[ -e $(SLAVE_IMG_FILE) ] || bximage -mode=create -hd=80M -q $(SLAVE_IMG_FILE) && echo "Make Master IMG File"
+	@[ -e $(SLAVE_IMG_FILE) ] || \
+		(bximage -mode=create -hd=80M -q $(SLAVE_IMG_FILE) && echo "Make Slave IMG File"\
+		&& fdisk -c 162 -h 16 -s 63 -b 512 -a dos -i -y $(SLAVE_IMG_FILE) && echo "Part Slave IMG File")
 
 compile: compile_mbr compile_loader compile_kernel
 	@echo "Done"
