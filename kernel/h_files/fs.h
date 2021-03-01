@@ -38,6 +38,16 @@ typedef enum {
 	O_CREAT = 4
 } oflags;
 
+/* 文件读写位置的偏移量 */
+typedef enum {
+	// 文件起始处
+	SEEK_SET = 1,
+	// 文件当前位置
+	SEEK_CUR,
+	// 文件末尾
+	SEEK_END
+} whence;
+
 /* 用来记录查找文件过程中已找到的上级路径，也就是查找文件过程中“走过的地方” */
 typedef struct {
 	// 查找过程中的父路径，如果文件不存在的话可通过此值来判断是路径的哪个部分不存在
@@ -54,5 +64,6 @@ void filesys_init();
 int32_t sys_close(int32_t fd);
 int32_t sys_write(int32_t fd, const void* buf, uint32_t count);
 int32_t sys_read(int32_t fd, void* buf, uint32_t count);
+int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence);
 
 #endif

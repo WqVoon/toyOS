@@ -36,14 +36,13 @@ int main(void) {
 	*((char*)buf + msg_len) = 0;
 	printk("-----\n%s\n", buf);
 
-	int rd_fd2 = open_file_with_tip("/ToMyLove", O_RDONLY);
+	sys_lseek(rd_fd1, 0, SEEK_SET);
 	memset(buf, 0, msg_len);
-	sys_read(rd_fd2, buf, msg_len);
+	sys_read(rd_fd1, buf, msg_len);
 	printk("-----\n%s", buf);
 
 	close_file_with_tip(wr_fd);
 	close_file_with_tip(rd_fd1);
-	close_file_with_tip(rd_fd2);
 
 	while(1);
 	return 0;

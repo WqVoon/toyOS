@@ -452,6 +452,42 @@ int32_t sys_read(int32_t fd, void* buf, uint32_t count) {
 	}
 }
 
+/* 重置用于文件读写操作的偏移指针，成功返回新的偏移量，失败返回 -1 */
+int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence) {
+	if (fd <= stderr_no) {
+		printk("sys_lseek: fd error\n");
+		return -1;
+	}
+	ASSERT(whence > 0 && whence < 4);
+
+	uint32_t _fd = fd_local2global(fd);
+	file* pf = &file_table[_fd];
+
+	// 新的偏移量必须位于文件大小之内
+	int32_t new_pos = 0;
+	int32_t file_size = (int32_t)pf->fd_inode->i_size;
+
+	switch (whence)
+	{
+	case SEEK_SET:
+		new_pos = offset;
+		break;
+	case SEEK_CUR:
+		new_pos = (int32_t)pf->fd_pos + offset;
+		break;
+	case SEEK_END:
+		new_pos = file_size + offset;
+		break;
+	}
+
+	// 下标从 0 开始，故最后一个有效位置的下标在文件大小 -1
+	if (new_pos < 0 || new_pos > (file_size-1)) {
+		return -1;
+	}
+	pf->fd_pos = new_pos;
+	return pf->fd_pos;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};
