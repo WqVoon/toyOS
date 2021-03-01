@@ -24,14 +24,17 @@ int main(void) {
 	const char* title = "To Lym:\n";
 	const char* msg   = "  I love u\n";
 
+	/*
+	这里验证了原书存在的一个 bug
+		在创建新文件时如果带有可写的模式，那么它不会对 write_deny 置位
+		这样就在同一时刻同一文件有两个可写的文件描述符
+	*/
 	printf("\nfd0:\n");
-	int fd = open_file_with_tip("/toMyLove", O_CREAT);
-	close_file_with_tip(fd);
+	int fd = open_file_with_tip("/toMyLove", O_CREAT|O_WRONLY);
 
 	printf("\nfd1:\n");
 	fd = open_file_with_tip("/toMyLove", O_RDWR);
 	sys_write(fd, title, strlen(title));
-	close_file_with_tip(fd);
 
 	printf("\nfd2:\n");
 	fd = open_file_with_tip("/toMyLove", O_RDWR);
