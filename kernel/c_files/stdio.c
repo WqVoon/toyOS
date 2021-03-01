@@ -100,7 +100,7 @@ uint32_t printf(const char* format, ...) {
 	char buf[BUF_SIZE] = {0};
 	vsprintf(buf, format, args);
 	va_end(args);
-	return write(buf);
+	return write(1, buf, strlen(buf));
 }
 
 /* 供内核使用的输出函数，因此不需要系统调用 */

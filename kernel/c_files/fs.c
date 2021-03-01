@@ -1,4 +1,5 @@
 #include "super_block.h"
+#include "console.h"
 #include "string.h"
 #include "thread.h"
 #include "memory.h"
@@ -83,7 +84,7 @@ static void partition_format(partition* part) {
 	disk* hd = part->my_disk;
 /* 先把超级块写入本分区的 1 扇区 */
 	ide_write(hd, part->start_lba + 1, &sb, 1);
-	printk("   super_block_lba:      0x%x\n", part->start_lba + 1);
+	printk("   super_block_lba:      %x\n", part->start_lba + 1);
 
 	// 找出数据量最大的元信息，用其尺寸做存储缓冲区
 	uint32_t buf_size = (
@@ -149,7 +150,7 @@ static void partition_format(partition* part) {
 	ide_write(hd, sb.data_start_lba, buf, 1);
 
 	printk(
-		"   root_dir_lba: 0x%x\n"
+		"   root_dir_lba: %x\n"
 		"%s format done\n",
 		sb.data_start_lba, part->name
 	);
@@ -377,6 +378,7 @@ int32_t sys_open(const char* pathname, uint8_t flags) {
 		printk("creating file\n");
 		fd = file_create(searched_record.parent_dir, (strrchr(pathname, '/')+1), flags);
 		dir_close(searched_record.parent_dir);
+		break;
 	// 其余为打开文件
 	default:
 		fd = file_open(inode_no, flags);
@@ -404,6 +406,31 @@ int32_t sys_close(int32_t fd) {
 		running_thread()->fd_table[fd] = -1;
 	}
 	return ret;
+}
+
+/* 将 buf 中连续 count 个字节写入描述符 fd，成功则返回写入的字节数，失败返回 -1 */
+int32_t sys_write(int32_t fd, const void* buf, uint32_t count) {
+	// TODO: 原书实现有 bug，stdin_no 和 stderr_no 都不该被写入
+	if (fd < stdout_no || fd == stderr_no) {
+		printk("sys_write: fd error\n");
+		return -1;
+	} else if (fd == stdout_no) {
+		// TODO: 原书实现有 bug，count 完全可以大于 1024，这里为实现简单直接用 ASSERT 避免
+		ASSERT(count <= 1023);
+		char tmp_buf[1024] = {0};
+		memcpy(tmp_buf, buf, count);
+		printk(tmp_buf);
+		return count;
+	}
+
+	uint32_t _fd = fd_local2global(fd);
+	file* wr_file = &file_table[_fd];
+	if (wr_file->fd_flag & O_WRONLY || wr_file->fd_flag & O_RDWR) {
+		return file_write(wr_file, buf, count);
+	} else {
+		printk("sys_write: not allowed to write file without O_RDWR or O_WRONLY\n");
+		return -1;
+	}
 }
 
 static bool for_each_partition(struct list_elem* tag, int unused) {

@@ -12,7 +12,7 @@ typedef enum {
 
 uint32_t getpid(void);
 
-uint32_t write(const char* str);
+uint32_t write(int32_t fd, const void* buf, uint32_t count);
 
 void syscall_init(void);
 

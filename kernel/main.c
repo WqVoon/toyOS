@@ -21,18 +21,27 @@ int main(void) {
 	init_all();
 	intr_enable();
 
-	/*
-	验证了原书在 sys_close 函数实现上存在 bug
-	 "file->fd_inode->write_deny = false" 这句被 fd2 的关闭执行到
-	 结果 fd3 可以用写文件的方式打开
-	*/
-	int fd1 = open_file_with_tip("/toMyLove", O_WRONLY);
-	int fd2 = open_file_with_tip("/toMyLove", O_RDONLY);
-	close_file_with_tip(fd2);
-	int fd3 = open_file_with_tip("/toMyLove", O_WRONLY);
+	const char* title = "To Lym:\n";
+	const char* msg   = "  I love u\n";
 
-	close_file_with_tip(fd1);
-	close_file_with_tip(fd3);
+	printf("\nfd0:\n");
+	int fd = open_file_with_tip("/toMyLove", O_CREAT);
+	close_file_with_tip(fd);
+
+	printf("\nfd1:\n");
+	fd = open_file_with_tip("/toMyLove", O_RDWR);
+	sys_write(fd, title, strlen(title));
+	close_file_with_tip(fd);
+
+	printf("\nfd2:\n");
+	fd = open_file_with_tip("/toMyLove", O_RDWR);
+	sys_write(fd, msg, strlen(msg));
+	close_file_with_tip(fd);
+
+	printf("\nfd3:\n");
+	fd = open_file_with_tip("/toMyLove", O_RDONLY);
+	sys_write(fd, msg, strlen(msg));
+	close_file_with_tip(fd);
 
 	while(1);
 	return 0;
