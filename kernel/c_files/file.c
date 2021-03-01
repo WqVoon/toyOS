@@ -195,3 +195,16 @@ int32_t file_open(uint32_t inode_no, uint8_t flag) {
 	}
 	return pcb_fd_install(fd_idx);
 }
+
+/* 关闭文件，成功返回 0，失败返回 -1 */
+int32_t file_close(file* file) {
+	if (file == NULL) {
+		return -1;
+	}
+	// TODO: 这里是不是有 bug，如果当前文件不以写的方式打开，那么有可能会改变其他文件描述符为 write_deny 的赋值
+	file->fd_inode->write_deny = 0;
+	inode_close(file->fd_inode);
+	// 这里使 file_table 对应的项目可用
+	file->fd_inode = NULL;
+	return 0;
+}

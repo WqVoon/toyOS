@@ -36,5 +36,6 @@ int32_t block_bitmap_alloc(partition* part);
 void bitmap_sync(partition* part, uint32_t bit_idx, bitmap_type btmp);
 int32_t file_create(dir* parent_dir, char* filename, uint8_t flag);
 int32_t file_open(uint32_t inode_no, uint8_t flag);
+int32_t file_close(file* file);
 
 #endif
