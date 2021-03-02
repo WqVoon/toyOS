@@ -53,6 +53,11 @@ int16_t fork(void) {
 	return _syscall0(SYS_FORK);
 }
 
+/* 从文件描述符 fd 中读取 count 个字节到 buf 中 */
+int32_t read(int32_t fd, void* buf, uint32_t count) {
+	return _syscall3(SYS_READ, fd, buf, count);
+}
+
 /*---------- 内核态使用，即需要被注册到 syscall_table 的具体实现 ----------*/
 
 uint32_t sys_getpid(void) {
@@ -66,5 +71,6 @@ void syscall_init(void) {
 	syscall_table[SYS_MALLOC] = sys_malloc;
 	syscall_table[SYS_FREE]   = sys_free;
 	syscall_table[SYS_FORK]   = sys_fork;
+	syscall_table[SYS_READ]   = sys_read;
 	put_str("syscall_init done\n");
 }

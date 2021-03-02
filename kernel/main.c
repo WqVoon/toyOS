@@ -23,14 +23,13 @@ int main(void) {
 	init_all();
 	intr_enable();
 
-	/*
-	TODO: 这个放在 thread_init 里会导致 PF 异常，尚不知道原因
-	为了依然保证 init 进程的 pid 为 1，把 fork_pid 变成仅在创建新进程时才被调用
-	线程会继承对应进程的 pid，main thread 和 idle thread 不处理
-	*/
-	printk("main pid: %d\n", getpid());
-	thread_start("thread", 31, thread_task, NULL);
-	process_execute(init, "init");
+	char* buf = sys_malloc(1024);
+	printk("\nRead start\n");
+	read(0, buf, 10);
+	printk("Read end\n");
+	printk("Content: %s\n", buf);
+
+	// process_execute(init, "init");
 	while(1);
 	return 0;
 }

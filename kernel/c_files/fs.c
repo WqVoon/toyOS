@@ -1,4 +1,6 @@
 #include "super_block.h"
+#include "keyboard.h"
+#include "ioqueue.h"
 #include "console.h"
 #include "string.h"
 #include "thread.h"
@@ -435,13 +437,21 @@ int32_t sys_write(int32_t fd, const void* buf, uint32_t count) {
 
 /* 从文件描述符 fd 指向的文件中读取 count 个字节到 buf，成功返回字节数，失败返回 -1 */
 int32_t sys_read(int32_t fd, void* buf, uint32_t count) {
-	// TODO: 这里是否要特殊处理 stdin, stdout, stderr
-	if (fd <= stderr_no) {
+	ASSERT(buf != NULL);
+
+	if (fd < 0 || fd == stdout_no || fd == stderr_no) {
 		printk("sys_read: fd error\n");
 		return -1;
+	} else if (fd == stdin_no) {
+		char* buffer = buf;
+		uint32_t bytes_read = 0;
+		while (bytes_read < count) {
+			*buffer = ioq_getchar(&kbd_buf);
+			bytes_read++, buffer++;
+		}
+		return bytes_read;
 	}
 
-	ASSERT(buf != NULL);
 	uint32_t _fd = fd_local2global(fd);
 	file* rd_file = &file_table[_fd];
 	if (rd_file->fd_flag & O_CREAT || rd_file->fd_flag & O_WRONLY) {
