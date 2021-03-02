@@ -1,3 +1,4 @@
+#include "process.h"
 #include "debug.h"
 #include "print.h"
 #include "thread.h"
@@ -38,6 +39,11 @@ static int16_t allocate_pid(void) {
 	return next_pid;
 }
 
+/* 获取一个可用的 pid，内部是对静态函数 allocate_pid 的封装 */
+int16_t fork_pid(void) {
+	return allocate_pid();
+}
+
 /**
  * 由 kernel_thread 去执行 function(fun_arg)
  * 该函数作为 thread_stack 中的 eip 由 ret 指令跳转并执行
@@ -76,7 +82,6 @@ void thread_create(task_struct* pthread, thread_func function, void* func_arg) {
 /* 在 PCB 中初始化线程基本信息，信息位于 PCB 所在页的低地址 */
 void init_thread(task_struct* pthread, char* name, int prio) {
 	memset(pthread, 0, sizeof(*pthread));
-	pthread->pid = allocate_pid();
 	strcpy(pthread->name, name);
 
 	if (pthread == main_thread) {
@@ -85,6 +90,9 @@ void init_thread(task_struct* pthread, char* name, int prio) {
 		pthread->status = TASK_READY;
 	}
 
+	task_struct* cur = running_thread();
+	pthread->pid = cur->pid;
+	pthread->parent_id = cur->parent_id;
 	pthread->ticks = prio;
 	pthread->priority = prio;
 	pthread->elapsed_ticks = 0;

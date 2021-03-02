@@ -16,36 +16,45 @@
 
 int32_t open_file_with_tip(const char* pathname, oflags flag);
 int32_t close_file_with_tip(int32_t fd);
+void thread_task(void*);
+void init(void);
 
 int main(void) {
 	init_all();
 	intr_enable();
 
-	const char* msg = "To Lym:\n I love u\n";
-	uint32_t msg_len = strlen(msg);
-	void* buf = sys_malloc(512);
-
-	int wr_fd = open_file_with_tip("/ToMyLove", O_CREAT|O_WRONLY);
-	sys_write(wr_fd, msg, msg_len);
-
-	int rd_fd1 = open_file_with_tip("/ToMyLove", O_RDONLY);
-	printk("-----\n");
-	printk("1.read %d bytes\n", sys_read(rd_fd1, buf, 10));
-	printk("2.read %d bytes\n", sys_read(rd_fd1, buf+10, 10));
-	printk("3.read %d bytes\n", sys_read(rd_fd1, buf+10, 10));
-	*((char*)buf + msg_len) = 0;
-	printk("-----\n%s\n", buf);
-
-	sys_lseek(rd_fd1, 0, SEEK_SET);
-	memset(buf, 0, msg_len);
-	sys_read(rd_fd1, buf, msg_len);
-	printk("-----\n%s", buf);
-
-	close_file_with_tip(wr_fd);
-	close_file_with_tip(rd_fd1);
-
+	/*
+	TODO: 这个放在 thread_init 里会导致 PF 异常，尚不知道原因
+	为了依然保证 init 进程的 pid 为 1，把 fork_pid 变成仅在创建新进程时才被调用
+	线程会继承对应进程的 pid，main thread 和 idle thread 不处理
+	*/
+	printk("main pid: %d\n", getpid());
+	thread_start("thread", 31, thread_task, NULL);
+	process_execute(init, "init");
 	while(1);
 	return 0;
+}
+
+void thread_task(void* arg) {
+	printf("kernel thread pid: %d\n", getpid());
+}
+
+void init(void) {
+	uint32_t ret_pid = fork();
+	if (ret_pid) {
+		printf(
+			"I am father, my pid is %d"
+			", child pid is %d\n",
+			getpid(), ret_pid
+		);
+	} else {
+		printf(
+			"I am child, my pid is %d"
+			", ret pid is %d\n",
+			getpid(), ret_pid
+		);
+	}
+	while (1);
 }
 
 int32_t open_file_with_tip(const char* pathname, oflags flag) {

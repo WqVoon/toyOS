@@ -102,6 +102,11 @@ void process_execute(void* filename, char* name) {
 	// PCB 在内核空间中申请
 	task_struct* thread = get_kernel_pages(1);
 	init_thread(thread, name, default_prio);
+
+	thread->pid = fork_pid();
+	// 使任务的父进程默认为 -1
+	thread->parent_id = -1;
+
 	create_user_vaddr_bitmap(thread);
 	thread_create(thread, start_process, filename);
 	thread->pgdir = create_page_dir();

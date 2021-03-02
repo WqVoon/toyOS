@@ -5,6 +5,7 @@
 #include "console.h"
 #include "string.h"
 #include "memory.h"
+#include "fork.h"
 
 #define SYSCALL_NR 32
 typedef void* syscall;
@@ -47,6 +48,11 @@ void free(void* ptr) {
 	_syscall1(SYS_FREE, ptr);
 }
 
+/* fork 一个子进程出来 */
+int16_t fork(void) {
+	return _syscall0(SYS_FORK);
+}
+
 /*---------- 内核态使用，即需要被注册到 syscall_table 的具体实现 ----------*/
 
 uint32_t sys_getpid(void) {
@@ -59,5 +65,6 @@ void syscall_init(void) {
 	syscall_table[SYS_WRITE]  = sys_write;
 	syscall_table[SYS_MALLOC] = sys_malloc;
 	syscall_table[SYS_FREE]   = sys_free;
+	syscall_table[SYS_FORK]   = sys_fork;
 	put_str("syscall_init done\n");
 }

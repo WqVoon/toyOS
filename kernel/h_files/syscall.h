@@ -7,7 +7,8 @@ typedef enum {
 	SYS_GETPID,
 	SYS_WRITE,
 	SYS_MALLOC,
-	SYS_FREE
+	SYS_FREE,
+	SYS_FORK
 } stscall_nr;
 
 uint32_t getpid(void);
@@ -19,5 +20,7 @@ void syscall_init(void);
 void* malloc(uint32_t size);
 
 void free(void* ptr);
+
+int16_t fork(void);
 
 #endif

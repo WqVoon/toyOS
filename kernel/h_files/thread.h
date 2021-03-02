@@ -65,6 +65,8 @@ typedef struct {
 /* 进程或线程的 pcb，程序控制块 */
 typedef struct __task_struct {
 	uint32_t* self_kstack;
+	// TODO: 这里有个玄学问题，在调整它的类型为 uint32_t 时就会出现
+	int16_t parent_id;
 	int16_t pid;
 	task_status status;
 	uint8_t priority;
@@ -105,5 +107,6 @@ void thread_unblock(task_struct*);
 void init_thread(task_struct* pthread, char* name, int prio);
 void thread_create(task_struct* pthread, thread_func function, void* func_arg);
 void thread_yeild(void);
+int16_t fork_pid(void);
 
 #endif
