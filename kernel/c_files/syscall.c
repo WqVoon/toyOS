@@ -58,11 +58,23 @@ int32_t read(int32_t fd, void* buf, uint32_t count) {
 	return _syscall3(SYS_READ, fd, buf, count);
 }
 
+/* 输出一个字符 */
+void putchar(char ascii) {
+	_syscall1(SYS_PUTCHAR, ascii);
+}
+
+/* 清空屏幕 */
+void clear(void) {
+	_syscall0(SYS_CLEAR);
+}
+
 /*---------- 内核态使用，即需要被注册到 syscall_table 的具体实现 ----------*/
 
 uint32_t sys_getpid(void) {
 	return running_thread()->pid;
 }
+
+extern void cls_screen(void);
 
 void syscall_init(void) {
 	put_str("syscall_init start\n");
@@ -72,5 +84,7 @@ void syscall_init(void) {
 	syscall_table[SYS_FREE]   = sys_free;
 	syscall_table[SYS_FORK]   = sys_fork;
 	syscall_table[SYS_READ]   = sys_read;
+	syscall_table[SYS_CLEAR]  = cls_screen;
+	syscall_table[SYS_PUTCHAR]= put_char;
 	put_str("syscall_init done\n");
 }

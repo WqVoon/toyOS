@@ -271,3 +271,28 @@ put_int:
 
 	popad
 	ret
+
+
+;------------- cls_screen -------------
+; 清屏函数
+global cls_screen
+cls_screen:
+	pushad
+
+	mov ax, SELECTOR_VIDEO
+	mov gs, ax
+
+	mov ebx, 0
+	mov ecx, 80*25
+.cls:
+	; 0x0720 是黑底白字的空格键
+	mov word [gs:ebx], 0x0720
+	add ebx, 2
+	loop .cls
+
+	push 0
+	call set_cursor
+	add esp, 4
+
+	popad
+	ret

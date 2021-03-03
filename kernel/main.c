@@ -16,44 +16,31 @@
 
 int32_t open_file_with_tip(const char* pathname, oflags flag);
 int32_t close_file_with_tip(int32_t fd);
-void thread_task(void*);
 void init(void);
+extern void my_shell(void);
 
 int main(void) {
 	init_all();
 	intr_enable();
 
-	char* buf = sys_malloc(1024);
-	printk("\nRead start\n");
-	read(0, buf, 10);
-	printk("Read end\n");
-	printk("Content: %s\n", buf);
+	printk("\nPress any key to run shell...");
 
-	// process_execute(init, "init");
+	int32_t buf;
+	read(0, &buf, 1);
+	process_execute(init, "init");
+
 	while(1);
 	return 0;
 }
 
-void thread_task(void* arg) {
-	printf("kernel thread pid: %d\n", getpid());
-}
-
 void init(void) {
+	clear();
 	uint32_t ret_pid = fork();
 	if (ret_pid) {
-		printf(
-			"I am father, my pid is %d"
-			", child pid is %d\n",
-			getpid(), ret_pid
-		);
+		while (1);
 	} else {
-		printf(
-			"I am child, my pid is %d"
-			", ret pid is %d\n",
-			getpid(), ret_pid
-		);
+		my_shell();
 	}
-	while (1);
 }
 
 int32_t open_file_with_tip(const char* pathname, oflags flag) {
