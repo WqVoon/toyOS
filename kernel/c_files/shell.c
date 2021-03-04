@@ -8,6 +8,12 @@
 #define cmd_len 128
 // 加上命令名外，最多支持 15 个参数
 #define MAX_ARG_NR 16
+// 用来存储切分后的命令
+char* argv[MAX_ARG_NR];
+// 用来记录切分后的命令有多少个单词
+int32_t argc = -1;
+// 用来将 cmd_map 中的第二项强转成函数指针
+typedef void(func)(char**);
 
 /* 用来存储输入的命令 */
 static char cmd_line[cmd_len] = {0};
@@ -84,11 +90,39 @@ static int32_t cmd_parse(char* cmd_str, char** argv, char token) {
 	return argc;
 }
 
-char* argv[MAX_ARG_NR];
-int32_t argc = -1;
+/* 用来测试 cmd_map list 是否可用 */
+static void builtin_say(char** argv) {
+	printf("You said: ");
+	for (int idx = 1; idx < argc; idx++) {
+		printf(argv[idx]);
+		putchar(' ');
+	}
+	putchar('\n');
+}
+
+static void builtin_help(char** argv) {
+	printf(
+		"Support the following cmds:\n"
+		" say:   print argvs to test\n"
+		" clear: clear the screen\n"
+		" help:  show this menu\n"
+	);
+}
+
+extern void clear(void);
+
+
+// cmd 字符串和函数的映射表
+void* cmd_map[][2] = {
+	{"say",   builtin_say},
+	{"clear", clear},
+	{"help",  builtin_help}
+};
 
 /* 简单的 shell */
 void my_shell(void) {
+	uint32_t cmd_map_size = sizeof(cmd_map) / 8;
+
 	while (1) {
 		print_prompt();
 		memset(cmd_line, 0, cmd_len);
@@ -99,15 +133,19 @@ void my_shell(void) {
 		}
 		argc = cmd_parse(cmd_line, argv, ' ');
 		if (argc == -1) {
-			printf("[ERROR] out of max number of argv");
+			printf("[ERROR] out of max number of argv\n");
 			continue;
 		}
 
-		int32_t arg_idx = 0;
-		while (arg_idx < argc) {
-			printf("%s ", argv[arg_idx]);
-			arg_idx++;
+		int idx = 0;
+		for (; idx<cmd_map_size; idx++) {
+			if (!strcmp(cmd_map[idx][0], argv[0])) {
+				((func*)cmd_map[idx][1])(argv);
+				break;
+			}
 		}
-		putchar('\n');
+		if (idx == cmd_map_size) {
+			printf("[ERROR] unsupported cmd, type 'help' to get help\n");
+		}
 	}
 }
