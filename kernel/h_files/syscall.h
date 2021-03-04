@@ -11,7 +11,9 @@ typedef enum {
 	SYS_FORK,
 	SYS_READ,
 	SYS_PUTCHAR,
-	SYS_CLEAR
+	SYS_CLEAR,
+	SYS_OPEN,
+	SYS_CLOSE
 } stscall_nr;
 
 uint32_t getpid(void);
@@ -31,5 +33,9 @@ int32_t read(int32_t fd, void* buf, uint32_t count);
 void putchar(char ascii);
 
 void clear(void);
+
+int32_t open(const char* pathname, uint8_t flags);
+
+int32_t close(int32_t fd);
 
 #endif

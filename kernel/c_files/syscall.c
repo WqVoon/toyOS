@@ -68,6 +68,16 @@ void clear(void) {
 	_syscall0(SYS_CLEAR);
 }
 
+/* 以 flags 指定的方式打开一个文件，成功返回描述符，失败返回 -1 */
+int32_t open(const char* pathname, uint8_t flags) {
+	return _syscall2(SYS_OPEN, pathname, flags);
+}
+
+/* 关闭 fd 指定的文件 */
+int32_t close(int32_t fd) {
+	return _syscall1(SYS_CLOSE, fd);
+}
+
 /*---------- 内核态使用，即需要被注册到 syscall_table 的具体实现 ----------*/
 
 uint32_t sys_getpid(void) {
@@ -86,5 +96,7 @@ void syscall_init(void) {
 	syscall_table[SYS_READ]   = sys_read;
 	syscall_table[SYS_CLEAR]  = cls_screen;
 	syscall_table[SYS_PUTCHAR]= put_char;
+	syscall_table[SYS_OPEN]   = sys_open;
+	syscall_table[SYS_CLOSE]  = sys_close;
 	put_str("syscall_init done\n");
 }

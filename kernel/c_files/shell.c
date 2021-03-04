@@ -13,14 +13,15 @@ char* argv[MAX_ARG_NR];
 // 用来记录切分后的命令有多少个单词
 int32_t argc = -1;
 // 用来将 cmd_map 中的第二项强转成函数指针
-typedef void(func)(char**);
-
+typedef void(func)(void);
+// IO 操作的 buffer，设置为 512 字节大小
+static char* buffer = NULL;
 /* 用来存储输入的命令 */
 static char cmd_line[cmd_len] = {0};
 
 /* 用来输出命令提示符，由于还没实现 cwd，故先使用 / */
 void print_prompt(void) {
-	printf("[mylym@localhost %s]$ ", "/");
+	printf("\n[mylym@localhost %s]$ ", "/");
 }
 
 /* 从键盘输入缓冲区中最多读入 count 个字节到 buf 中 */
@@ -91,7 +92,7 @@ static int32_t cmd_parse(char* cmd_str, char** argv, char token) {
 }
 
 /* 用来测试 cmd_map list 是否可用 */
-static void builtin_say(char** argv) {
+static void builtin_say() {
 	printf("You said: ");
 	for (int idx = 1; idx < argc; idx++) {
 		printf(argv[idx]);
@@ -100,10 +101,92 @@ static void builtin_say(char** argv) {
 	putchar('\n');
 }
 
+/* 读取一个文件 */
+static void builtin_cat() {
+	if (argc != 2) {
+		printf("[ERROR] You need to provide a filename\n");
+		return;
+	}
+
+	int32_t fd;
+	if ((fd = open(argv[1], O_RDONLY)) != -1) {
+		memset(buffer, 0, 512);
+		while (read(fd, buffer, 512) != -1) {
+			printf(buffer);
+			memset(buffer, 0, 512);
+		}
+		close(fd);
+	} else {
+		printf("[ERROR] open file error\n");
+		return;
+	}
+}
+
+/* 创建一个文件 */
+static void builtin_touch() {
+	if (argc != 2) {
+		printf("[ERROR] touch cmd should look like `touch <filename>`\n");
+		return;
+	}
+
+	const char* filename = argv[1];
+	int32_t fd;
+	if ((fd = open(filename, O_CREAT)) != -1) {
+		printf("you create file %s\n", filename);
+		close(fd);
+	} else {
+		printf("[ERROR] fail to create file %s\n", filename);
+	}
+}
+
+/* TODO: 编辑一个已经存在的文件，当前仅支持在原有内容上追加内容，未来修改之 */
+static void builtin_edit() {
+	if (argc != 3) {
+		printf("[ERROR] edit cmd should look like `edit <filename> <delimiter>`\n");
+		return;
+	}
+
+	const char* filename = argv[1];
+	const char* delim = argv[2];
+	printf("Edit %s, use %c as delim\n", filename, delim[0]);
+	int32_t fd;
+	if ((fd = open(filename, O_WRONLY)) != -1) {
+		memset(buffer, 0, 512);
+		char* buf = buffer;
+		while (read(0, buf, 1) != -1 && *buf != delim[0]) {
+			putchar(*buf);
+
+			if (buf[0] == '\b') {
+				if (buffer[0] != '\b') {
+					buf--;
+				}
+				continue;
+			}
+
+			if (buf - buffer == 512) {
+				write(fd, buffer, 512);
+				memset(buffer, 0, 512);
+				buf = buffer;
+			} else {
+				buf++;
+			}
+		}
+		if (buf != buffer) {
+			write(fd, buffer, buf - buffer);
+		}
+		close(fd);
+	} else {
+		printf("[ERROR] fail to edit file %s\n", filename);
+	}
+}
+
 static void builtin_help(char** argv) {
 	printf(
 		"Support the following cmds:\n"
 		" say:   print argvs to test\n"
+		" cat:   print a file content\n"
+		" touch: create a empty file\n"
+		" edit:  edit a exists file\n"
 		" clear: clear the screen\n"
 		" help:  show this menu\n"
 	);
@@ -115,6 +198,9 @@ extern void clear(void);
 // cmd 字符串和函数的映射表
 void* cmd_map[][2] = {
 	{"say",   builtin_say},
+	{"cat",   builtin_cat},
+	{"touch", builtin_touch},
+	{"edit",  builtin_edit},
 	{"clear", clear},
 	{"help",  builtin_help}
 };
@@ -122,6 +208,11 @@ void* cmd_map[][2] = {
 /* 简单的 shell */
 void my_shell(void) {
 	uint32_t cmd_map_size = sizeof(cmd_map) / 8;
+	if ((buffer = malloc(512)) == NULL) {
+		printf("[ERROR] fail to create buffer\n");
+		return;
+	}
+	printf("Welcome! please type 'help' before you use this toyOS\n");
 
 	while (1) {
 		print_prompt();
@@ -140,7 +231,7 @@ void my_shell(void) {
 		int idx = 0;
 		for (; idx<cmd_map_size; idx++) {
 			if (!strcmp(cmd_map[idx][0], argv[0])) {
-				((func*)cmd_map[idx][1])(argv);
+				((func*)cmd_map[idx][1])();
 				break;
 			}
 		}

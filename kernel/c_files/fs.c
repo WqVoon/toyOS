@@ -377,7 +377,6 @@ int32_t sys_open(const char* pathname, uint8_t flags) {
 	// TODO: 这个 switch 为什么不换成 if
 	switch (flags & O_CREAT) {
 	case O_CREAT:
-		printk("creating file\n");
 		fd = file_create(searched_record.parent_dir, (strrchr(pathname, '/')+1), flags);
 		dir_close(searched_record.parent_dir);
 		break;
@@ -385,7 +384,6 @@ int32_t sys_open(const char* pathname, uint8_t flags) {
 	default:
 		fd = file_open(inode_no, flags);
 	}
-
 	// 此 fd 是指任务 pcb->file_table 数组中的下标，而不是全局 file_table 的下标
 	return fd;
 }
