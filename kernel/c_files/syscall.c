@@ -86,6 +86,10 @@ void rewinddir(dir* dir) {
 	_syscall1(SYS_REWINDDIR, dir);
 }
 
+int32_t unlink(const char* pathname) {
+	return _syscall1(SYS_UNLINK, pathname);
+}
+
 /*---------- 内核态使用，即需要被注册到 syscall_table 的具体实现 ----------*/
 
 uint32_t sys_getpid(void) {
@@ -110,5 +114,6 @@ void syscall_init(void) {
 	syscall_table[SYS_CLOSEDIR]  = sys_closedir;
 	syscall_table[SYS_READDIR]   = sys_readdir;
 	syscall_table[SYS_REWINDDIR] = sys_rewinddir;
+	syscall_table[SYS_UNLINK]    = sys_unlink;
 	put_str("syscall_init done\n");
 }

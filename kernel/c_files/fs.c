@@ -533,6 +533,59 @@ int32_t sys_closedir(dir* d) {
 	return ret;
 }
 
+/* 删除一个普通文件，成功返回 0，失败返回 -1 */
+int32_t sys_unlink(const char* pathname) {
+	ASSERT(strlen(pathname) < MAX_PATH_LEN);
+
+	path_search_record searched_record;
+	memset(&searched_record, 0, sizeof(path_search_record));
+	int inode_no = search_file(pathname, &searched_record);
+	ASSERT(inode_no != 0);
+	if (inode_no == -1) {
+		printk("file %s not found\n", pathname);
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	if (searched_record.file_type == FT_DIRECTORY) {
+		printk("can't delete a direcotry now");
+		dir_close(searched_record.parent_dir);
+		return -1;
+	}
+
+	/* 检查是否在已经打开的文件列表中 */
+	uint32_t file_idx = 0;
+	while (file_idx < MAX_FILE_OPEN) {
+		if (
+			file_table[file_idx].fd_inode != NULL
+			&& (uint32_t)inode_no == file_table[file_idx].fd_inode->i_no
+		) {
+			break;
+		}
+		file_idx++;
+	}
+	if (file_idx < MAX_FILE_OPEN) {
+		dir_close(searched_record.parent_dir);
+		printk("file %s is in use, not allow to delete\n", pathname);
+		return -1;
+	}
+	ASSERT(file_idx == MAX_FILE_OPEN);
+
+	void* io_buf = sys_malloc(SECTOR_SIZE * 2);
+	if (io_buf == NULL) {
+		dir_close(searched_record.parent_dir);
+		printk("sys_unlink: malloc for io_buf failed\n");
+		return -1;
+	}
+
+	dir* parent_dir = searched_record.parent_dir;
+	delete_dir_entry(cur_part, parent_dir, inode_no, io_buf);
+	inode_release(cur_part, inode_no);
+	sys_free(io_buf);
+	dir_close(searched_record.parent_dir);
+	return 0;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};

@@ -18,7 +18,8 @@ typedef enum {
 	SYS_OPENDIR,
 	SYS_CLOSEDIR,
 	SYS_READDIR,
-	SYS_REWINDDIR
+	SYS_REWINDDIR,
+	SYS_UNLINK
 } stscall_nr;
 
 uint32_t getpid(void);
@@ -46,5 +47,7 @@ int32_t close(int32_t fd);
 dir_entry* readdir(dir* dir);
 
 void rewinddir(dir* dir);
+
+int32_t unlink(const char* pathname);
 
 #endif

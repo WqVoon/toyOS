@@ -33,5 +33,6 @@ bool sync_dir_entry(dir* parent_dir, dir_entry* p_de, void* io_buf);
 dir_entry* dir_read(dir* dir);
 dir_entry* sys_readdir(dir* dir);
 void sys_rewinddir(dir* dir);
+bool delete_dir_entry(partition* part, dir* pdir, uint32_t inode_no, void* io_buf);
 
 #endif

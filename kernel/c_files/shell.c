@@ -104,7 +104,10 @@ static void builtin_say() {
 /* 读取一个文件 */
 static void builtin_cat() {
 	if (argc != 2 || argv[1][0] != '/') {
-		printf("[ERROR] cat cmd should look like `cat /123`\n");
+		printf(
+			"[ERROR] cat cmd should look like `cat /%s`\n",
+			(argc >= 2? argv[1]: "file")
+		);
 		return;
 	}
 
@@ -125,7 +128,10 @@ static void builtin_cat() {
 /* 创建一个文件 */
 static void builtin_touch() {
 	if (argc != 2 || argv[1][0] != '/') {
-		printf("[ERROR] touch cmd should look like `touch /123`\n");
+		printf(
+			"[ERROR] touch cmd should look like `touch /%s`\n",
+			(argc >= 2? argv[1]: "file")
+		);
 		return;
 	}
 
@@ -142,7 +148,11 @@ static void builtin_touch() {
 /* TODO: 编辑一个已经存在的文件，当前仅支持在原有内容上追加内容，未来修改之 */
 static void builtin_edit() {
 	if (argc != 3 || argv[1][0] != '/') {
-		printf("[ERROR] edit cmd should look like `edit /123 $`\n");
+		printf(
+			"[ERROR] edit cmd should look like `edit /%s %s`\n",
+			(argc >= 2? argv[1]: "file"),
+			(argc >= 3? argv[2]: "$")
+		);
 		return;
 	}
 
@@ -180,6 +190,22 @@ static void builtin_edit() {
 	}
 }
 
+static void builtin_rm() {
+	if (argc != 2 || argv[1][0] != '/') {
+		printf(
+			"[ERROR] rm cmd should look like `rm /%s`\n",
+			(argc >= 2? argv[1]: "file")
+		);
+		return;
+	}
+
+	if (unlink(argv[1]) == -1) {
+		printf("[ERROR] delete %s failed\n", argv[1]);
+	} else {
+		printf("You deleted %s\n", argv[1]);
+	}
+}
+
 extern dir root_dir;
 /*TODO: 显示当前目录里的内容，目前仅支持 root_dir*/
 static void builtin_ls() {
@@ -196,6 +222,7 @@ static void builtin_help() {
 	printf(
 		"Support the following cmds:\n"
 		" say:   print argvs to test\n"
+		" rm:    remove a regular file\n"
 		" ls:    list root directory contents\n"
 		" cat:   print a file content\n"
 		" touch: create a empty file\n"
@@ -217,6 +244,7 @@ void* cmd_map[][2] = {
 	{"edit",  builtin_edit},
 	{"clear", clear},
 	{"ls",    builtin_ls},
+	{"rm",    builtin_rm},
 	{"help",  builtin_help}
 };
 

@@ -3,6 +3,7 @@
 #include "stdint.h"
 #include "inode.h"
 #include "list.h"
+#include "file.h"
 #include "fs.h"
 
 /* 用来存储 inode 位置 */
@@ -144,4 +145,48 @@ void inode_init(uint32_t inode_no, inode* new_inode) {
 	for (int i=0; i<13; i++) {
 		new_inode->i_sectors[i] = 0;
 	}
+}
+
+/* 回收 inode 的数据块和 inode 本身 */
+void inode_release(partition* part, uint32_t inode_no) {
+	inode* inode_to_del = inode_open(part, inode_no);
+	ASSERT(inode_to_del->i_no == inode_no);
+
+/* 回收 inode 的数据块 */
+	uint8_t block_idx = 0, block_cnt = 12;
+	uint32_t block_bitmap_idx;
+	uint32_t all_blocks[140] = {0};
+
+	while (block_idx < 12) {
+		all_blocks[block_idx] = inode_to_del->i_sectors[block_idx];
+		block_idx++;
+	}
+/* 如果一级间接表存在，读入其条目并清理其本身所占的空间 */
+	if (inode_to_del->i_sectors[12] != 0) {
+		ide_read(part->my_disk, inode_to_del->i_sectors[12], all_blocks+12, 1);
+		block_cnt = 140;
+
+		// 回收一级间接块表占用的扇区
+		block_bitmap_idx =\
+		inode_to_del->i_sectors[12] - part->sb->data_start_lba;
+		ASSERT(block_bitmap_idx > 0);
+		bitmap_set(&part->block_bitmap, block_bitmap_idx, 0);
+		bitmap_sync(part, block_bitmap_idx, BLOCK_BITMAP);
+	}
+/* 逐个回收扇区们 */
+	block_idx = 0;
+	while (block_idx < block_cnt) {
+		if (all_blocks[block_idx] != 0) {
+			block_bitmap_idx = all_blocks[block_idx] - part->sb->data_start_lba;
+			ASSERT(block_bitmap_idx > 0);
+			bitmap_set(&part->block_bitmap, block_bitmap_idx, 0);
+			bitmap_sync(part, block_bitmap_idx, BLOCK_BITMAP);
+		}
+		block_idx++;
+	}
+
+	bitmap_set(&part->inode_bitmap, inode_no, 0);
+	bitmap_sync(part, inode_no, INODE_BITMAP);
+
+	inode_close(inode_to_del);
 }
