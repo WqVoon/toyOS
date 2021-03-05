@@ -228,8 +228,19 @@ static void builtin_help() {
 		" touch: create a empty file\n"
 		" edit:  edit a exists file\n"
 		" clear: clear the screen\n"
+		" logo:  just for fun\n"
 		" help:  show this menu\n\n"
 		"* all filename/path should start with '/' *"
+	);
+}
+
+static void builtin_logo() {
+	printf(
+		" ____  __  _  _  __   ____\n"
+		"(_  _)/  \\( \\/ )/  \\ / ___)\n"
+		"  )( (  0 ))  /(  0 )\\___ \\\n"
+		" (__) \\__/(__/  \\__/ (____/\n"
+		"                            by Yuren."
 	);
 }
 
@@ -245,6 +256,7 @@ void* cmd_map[][2] = {
 	{"clear", clear},
 	{"ls",    builtin_ls},
 	{"rm",    builtin_rm},
+	{"logo",  builtin_logo},
 	{"help",  builtin_help}
 };
 
