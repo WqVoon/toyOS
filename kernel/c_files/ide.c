@@ -258,6 +258,7 @@ void ide_write(disk* hd, uint32_t lba, void* buf, uint32_t sec_cnt) {
 		sema_down(&hd->my_channel->disk_done);
 		secs_done += secs_op;
 	}
+	lock_release(&hd->my_channel->lock);
 }
 
 /* 硬盘中断处理程序 */
