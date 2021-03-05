@@ -217,3 +217,64 @@ bool sync_dir_entry(dir* parent_dir, dir_entry* p_de, void* io_buf) {
 	printk("directory is full\n");
 	return 0;
 }
+
+/* 读取目录，成功返回 1 个目录项，失败返回 NULL */
+dir_entry* dir_read(dir* dir) {
+	dir_entry* dir_e = (dir_entry*)dir->dir_buf;
+	inode* dir_inode = dir->inode;
+	uint32_t all_blocks[140] = {0}, block_cnt = 12;
+	uint32_t block_idx = 0, dir_entry_idx = 0;
+	// 根据 i_sectors 的状态读出目录所占的所有块
+	while (block_idx < 12) {
+		all_blocks[block_idx] = dir_inode->i_sectors[block_idx];
+		block_idx++;
+	}
+	if (dir_inode->i_sectors[12] != 0) {
+		ide_read(cur_part->my_disk, dir_inode->i_sectors[12], all_blocks+12, 1);
+		block_cnt = 140;
+	}
+	block_idx = 0;
+
+	uint32_t cur_dir_entry_pos = 0;
+	uint32_t dir_entry_size = cur_part->sb->dir_entry_size;
+	uint32_t dir_entrys_per_sec = SECTOR_SIZE / dir_entry_size;
+	while (dir->dir_pos < dir_inode->i_size) {
+		if (dir->dir_pos >= dir_inode->i_size) {
+			return NULL;
+		}
+		if (all_blocks[block_idx] == 0) {
+			block_idx++;
+			continue;
+		}
+		memset(dir_e, 0, SECTOR_SIZE);
+		ide_read(cur_part->my_disk, all_blocks[block_idx], dir_e, 1);
+		dir_entry_idx = 0;
+		while (dir_entry_idx < dir_entrys_per_sec) {
+			if ((dir_e + dir_entry_idx)->f_type) {
+				// 跳过已经读取过的目录项
+				if (cur_dir_entry_pos < dir->dir_pos) {
+					cur_dir_entry_pos += dir_entry_size;
+					dir_entry_idx++;
+					continue;
+				}
+				ASSERT(cur_dir_entry_pos == dir->dir_pos);
+				dir->dir_pos += dir_entry_size;
+				return dir_e + dir_entry_idx;
+			}
+			dir_entry_idx++;
+		}
+		block_idx++;
+	}
+	return NULL;
+}
+
+/* dir_read 的封装 */
+dir_entry* sys_readdir(dir* dir) {
+	ASSERT(dir != NULL);
+	return dir_read(dir);
+}
+
+/* 把目录 dir 的指针 dir_pos 置为 0 */
+void sys_rewinddir(dir* dir) {
+	dir->dir_pos = 0;
+}

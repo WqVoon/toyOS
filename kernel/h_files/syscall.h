@@ -2,6 +2,7 @@
 #define __LIB_USER_SYSCALL_H
 
 #include "stdint.h"
+#include "dir.h"
 
 typedef enum {
 	SYS_GETPID,
@@ -13,7 +14,11 @@ typedef enum {
 	SYS_PUTCHAR,
 	SYS_CLEAR,
 	SYS_OPEN,
-	SYS_CLOSE
+	SYS_CLOSE,
+	SYS_OPENDIR,
+	SYS_CLOSEDIR,
+	SYS_READDIR,
+	SYS_REWINDDIR
 } stscall_nr;
 
 uint32_t getpid(void);
@@ -37,5 +42,9 @@ void clear(void);
 int32_t open(const char* pathname, uint8_t flags);
 
 int32_t close(int32_t fd);
+
+dir_entry* readdir(dir* dir);
+
+void rewinddir(dir* dir);
 
 #endif

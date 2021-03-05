@@ -496,6 +496,43 @@ int32_t sys_lseek(int32_t fd, int32_t offset, uint8_t whence) {
 	return pf->fd_pos;
 }
 
+/* 打开一个目录，成功返回目录指针，失败返回 NULL */
+dir* sys_opendir(const char* name) {
+	ASSERT(strlen(name) < MAX_PATH_LEN);
+	if (name[0] == '/' && name[1] == 0) {
+		return &root_dir;
+	}
+
+	path_search_record searched_record;
+	memset(&searched_record, 0, sizeof(path_search_record));
+	int inode_no = search_file(name, &searched_record);
+	dir* ret = NULL;
+	if (inode_no == -1) {
+		printk(
+			"In %s, sub path %s not exist\n",
+			name, searched_record.searched_path
+		);
+	} else {
+		if (searched_record.file_type == FT_REGULAR) {
+			printk("%s is a regular file\n", name);
+		} else if (searched_record.file_type == FT_DIRECTORY) {
+			ret = dir_open(cur_part, inode_no);
+		}
+	}
+	dir_close(searched_record.parent_dir);
+	return ret;
+}
+
+/* 尝试关闭一个目录，成功返回 0， 失败返回 -1 */
+int32_t sys_closedir(dir* d) {
+	int32_t ret = -1;
+	if (d != NULL) {
+		dir_close(d);
+		ret = 0;
+	}
+	return ret;
+}
+
 static bool for_each_partition(struct list_elem* tag, int unused) {
 	partition* part = elem2entry(partition, part_tag, tag);
 	struct super_block sb_buf[1] = {0};

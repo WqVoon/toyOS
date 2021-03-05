@@ -30,5 +30,8 @@ bool search_dir_entry(partition* part, dir* pdir, const char* name, dir_entry* d
 void dir_close(dir* dir);
 void create_dir_entry(char* filename, uint32_t inode_no, uint8_t file_type, dir_entry* p_de);
 bool sync_dir_entry(dir* parent_dir, dir_entry* p_de, void* io_buf);
+dir_entry* dir_read(dir* dir);
+dir_entry* sys_readdir(dir* dir);
+void sys_rewinddir(dir* dir);
 
 #endif

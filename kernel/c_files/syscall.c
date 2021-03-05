@@ -78,6 +78,14 @@ int32_t close(int32_t fd) {
 	return _syscall1(SYS_CLOSE, fd);
 }
 
+dir_entry* readdir(dir* dir) {
+	return (dir_entry*)_syscall1(SYS_READDIR, dir);
+}
+
+void rewinddir(dir* dir) {
+	_syscall1(SYS_REWINDDIR, dir);
+}
+
 /*---------- 内核态使用，即需要被注册到 syscall_table 的具体实现 ----------*/
 
 uint32_t sys_getpid(void) {
@@ -88,15 +96,19 @@ extern void cls_screen(void);
 
 void syscall_init(void) {
 	put_str("syscall_init start\n");
-	syscall_table[SYS_GETPID] = sys_getpid;
-	syscall_table[SYS_WRITE]  = sys_write;
-	syscall_table[SYS_MALLOC] = sys_malloc;
-	syscall_table[SYS_FREE]   = sys_free;
-	syscall_table[SYS_FORK]   = sys_fork;
-	syscall_table[SYS_READ]   = sys_read;
-	syscall_table[SYS_CLEAR]  = cls_screen;
-	syscall_table[SYS_PUTCHAR]= put_char;
-	syscall_table[SYS_OPEN]   = sys_open;
-	syscall_table[SYS_CLOSE]  = sys_close;
+	syscall_table[SYS_GETPID] 	 = sys_getpid;
+	syscall_table[SYS_WRITE]  	 = sys_write;
+	syscall_table[SYS_MALLOC] 	 = sys_malloc;
+	syscall_table[SYS_FREE]   	 = sys_free;
+	syscall_table[SYS_FORK]   	 = sys_fork;
+	syscall_table[SYS_READ]   	 = sys_read;
+	syscall_table[SYS_CLEAR]  	 = cls_screen;
+	syscall_table[SYS_PUTCHAR]	 = put_char;
+	syscall_table[SYS_OPEN]   	 = sys_open;
+	syscall_table[SYS_CLOSE]  	 = sys_close;
+	syscall_table[SYS_OPENDIR]	 = sys_opendir;
+	syscall_table[SYS_CLOSEDIR]  = sys_closedir;
+	syscall_table[SYS_READDIR]   = sys_readdir;
+	syscall_table[SYS_REWINDDIR] = sys_rewinddir;
 	put_str("syscall_init done\n");
 }

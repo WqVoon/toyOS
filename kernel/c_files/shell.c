@@ -103,8 +103,8 @@ static void builtin_say() {
 
 /* 读取一个文件 */
 static void builtin_cat() {
-	if (argc != 2) {
-		printf("[ERROR] You need to provide a filename\n");
+	if (argc != 2 || argv[1][0] != '/') {
+		printf("[ERROR] cat cmd should look like `cat /123`\n");
 		return;
 	}
 
@@ -124,8 +124,8 @@ static void builtin_cat() {
 
 /* 创建一个文件 */
 static void builtin_touch() {
-	if (argc != 2) {
-		printf("[ERROR] touch cmd should look like `touch <filename>`\n");
+	if (argc != 2 || argv[1][0] != '/') {
+		printf("[ERROR] touch cmd should look like `touch /123`\n");
 		return;
 	}
 
@@ -141,8 +141,8 @@ static void builtin_touch() {
 
 /* TODO: 编辑一个已经存在的文件，当前仅支持在原有内容上追加内容，未来修改之 */
 static void builtin_edit() {
-	if (argc != 3) {
-		printf("[ERROR] edit cmd should look like `edit <filename> <delimiter>`\n");
+	if (argc != 3 || argv[1][0] != '/') {
+		printf("[ERROR] edit cmd should look like `edit /123 $`\n");
 		return;
 	}
 
@@ -180,15 +180,29 @@ static void builtin_edit() {
 	}
 }
 
-static void builtin_help(char** argv) {
+extern dir root_dir;
+/*TODO: 显示当前目录里的内容，目前仅支持 root_dir*/
+static void builtin_ls() {
+	dir* path = &root_dir;
+	rewinddir(path);
+	dir_entry* dir_e = NULL;
+	while (dir_e = readdir(path)) {
+		printf("%s ", dir_e->filename);
+	}
+	putchar('\n');
+}
+
+static void builtin_help() {
 	printf(
 		"Support the following cmds:\n"
 		" say:   print argvs to test\n"
+		" ls:    list root directory contents\n"
 		" cat:   print a file content\n"
 		" touch: create a empty file\n"
 		" edit:  edit a exists file\n"
 		" clear: clear the screen\n"
-		" help:  show this menu\n"
+		" help:  show this menu\n\n"
+		"* all filename/path should start with '/' *"
 	);
 }
 
@@ -202,6 +216,7 @@ void* cmd_map[][2] = {
 	{"touch", builtin_touch},
 	{"edit",  builtin_edit},
 	{"clear", clear},
+	{"ls",    builtin_ls},
 	{"help",  builtin_help}
 };
 

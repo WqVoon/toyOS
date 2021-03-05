@@ -17,20 +17,25 @@
 int32_t open_file_with_tip(const char* pathname, oflags flag);
 int32_t close_file_with_tip(int32_t fd);
 void init(void);
+void pause(const char*);
 extern void my_shell(void);
 
 int main(void) {
 	init_all();
 	intr_enable();
 
-	printk("\nPress any key to run shell...");
-
-	int32_t buf;
-	read(0, &buf, 1);
+	pause("\nPress any key to run shell...");
 	process_execute(init, "init");
 
 	while(1);
 	return 0;
+}
+
+/* 暂停直到输入了什么 */
+void pause(const char* msg) {
+	char buf;
+	printf(msg);
+	read(0, &buf, 1);
 }
 
 void init(void) {
