@@ -65,10 +65,9 @@ static void kernel_thread(thread_func* function, void* func_arg) {
  */
 static void task_done() {
 	task_struct* cur = running_thread();
-	cur->status = TASK_DIED;
 	intr_disable();
 	logk("Task `%s` ended\n", cur->name);
-	schedule();
+	thread_block(TASK_BLOCKED);
 }
 
 /* 初始化线程栈 thread_stack */
@@ -237,6 +236,22 @@ static void schedule_round_robin(void) {
 	switch_to(cur, next);
 }
 
+/* 展示当前的所有任务 */
+void show_tasks() {
+	intr_status old_status = intr_disable();
+	struct list* plist = &thread_ready_list;
+	struct list_elem* elem = plist->head.next;
+
+	printk("Tasks: ");
+	while (elem != &plist->tail) {
+		task_struct* task = elem2entry(task_struct, general_tag, elem);
+		printk("%s ", task->name);
+		elem = elem->next;
+	}
+	printk("\n");
+	intr_set_status(old_status);
+}
+
 /* 实现 FCFS 任务调度 */
 static void schedule_fcfs(void) {
 	ASSERT(intr_get_status() == INTR_OFF);
@@ -261,16 +276,54 @@ static void schedule_fcfs(void) {
 	switch_to(cur, next);
 }
 
+/* 实现 SJF 任务调度（非抢占式） */
+static void schedule_sjf(void) {
+	ASSERT(intr_get_status() == INTR_OFF);
+
+	task_struct* cur = running_thread();
+	// SJF 是非抢占式任务调度，因此只有当前任务终结才会发生任务切换
+	if (cur->status != TASK_DIED && cur->status != TASK_BLOCKED) {
+		return;
+	}
+
+	if (list_empty(&thread_ready_list)) {
+		thread_unblock(idle_thread);
+	}
+
+	int min_value = 255;
+	task_struct* next = NULL;
+	struct list* plist = &thread_ready_list;
+	thread_tag = plist->head.next;
+
+	while (thread_tag != &plist->tail) {
+		task_struct* task = elem2entry(task_struct, general_tag, thread_tag);
+		if (task->priority < min_value) {
+			min_value = task->priority;
+			next = task;
+		}
+		thread_tag = thread_tag->next;
+	}
+
+	if (next == NULL) return;
+	list_remove(&next->general_tag);
+	next->status = TASK_RUNNING;
+	// 切换任务
+	process_activate(next);
+	switch_to(cur, next);
+}
+
 /* 用来在 schedulers 中用作下标来选择具体的调度算法 */
 enum SCHEDULER_TYPE {
 	FCFS,
-	ROUND_ROBIN
+	ROUND_ROBIN,
+	SJF
 };
 
 /* 当前支持的任务调度算法列表 */
 static void(*schedulers[])(void) = {
 	schedule_fcfs,
 	schedule_round_robin,
+	schedule_sjf,
 };
 
 /* 初始化线程环境 */
@@ -280,8 +333,8 @@ void thread_init(void) {
 	list_init(&thread_all_list);
 	lock_init(&pid_lock);
 	make_main_thread();
-	idle_thread = thread_start("idle", 10, idle, NULL);
+	idle_thread = thread_start("idle", 1, idle, NULL);
 	// 设置具体的调度算法
-	schedule = schedulers[FCFS];
+	schedule = schedulers[SJF];
 	put_str("thread_init done\n");
 }

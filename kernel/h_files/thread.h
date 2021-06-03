@@ -108,5 +108,6 @@ void init_thread(task_struct* pthread, char* name, int prio);
 void thread_create(task_struct* pthread, thread_func function, void* func_arg);
 void thread_yeild(void);
 int16_t fork_pid(void);
+void show_tasks();
 
 #endif
