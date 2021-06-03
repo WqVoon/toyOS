@@ -220,10 +220,6 @@ static void schedule_round_robin(void) {
 		list_append(&thread_ready_list, &cur->general_tag);
 		cur->ticks = cur->priority;
 		cur->status = TASK_READY;
-	} else {
-		// TODO: ?
-		// 若此线程需要某些事件发生后才能继续上 cpu 运行
-		// 不需要将其加入队列，因为当前线程不在就绪队列中
 	}
 
 	if (list_empty(&thread_ready_list)) {
@@ -236,11 +232,46 @@ static void schedule_round_robin(void) {
 	task_struct* next = elem2entry(task_struct, general_tag, thread_tag);
 	next->status = TASK_RUNNING;
 
-	process_activate(next);
-
 	// 切换任务
+	process_activate(next);
 	switch_to(cur, next);
 }
+
+/* 实现 FCFS 任务调度 */
+static void schedule_fcfs(void) {
+	ASSERT(intr_get_status() == INTR_OFF);
+
+	task_struct* cur = running_thread();
+	// FCFS 是非抢占式任务调度，因此只有当前任务终结才会发生任务切换
+	if (cur->status != TASK_DIED && cur->status != TASK_BLOCKED) {
+		return;
+	}
+
+	if (list_empty(&thread_ready_list)) {
+		thread_unblock(idle_thread);
+	}
+	// 获取队列队首的 elem
+	thread_tag = NULL;
+	thread_tag = list_pop(&thread_ready_list);
+	// 获取 elem 对应的 PCB
+	task_struct* next = elem2entry(task_struct, general_tag, thread_tag);
+	next->status = TASK_RUNNING;
+	// 切换任务
+	process_activate(next);
+	switch_to(cur, next);
+}
+
+/* 用来在 schedulers 中用作下标来选择具体的调度算法 */
+enum SCHEDULER_TYPE {
+	FCFS,
+	ROUND_ROBIN
+};
+
+/* 当前支持的任务调度算法列表 */
+static void(*schedulers[])(void) = {
+	schedule_fcfs,
+	schedule_round_robin,
+};
 
 /* 初始化线程环境 */
 void thread_init(void) {
@@ -250,6 +281,7 @@ void thread_init(void) {
 	lock_init(&pid_lock);
 	make_main_thread();
 	idle_thread = thread_start("idle", 10, idle, NULL);
-	schedule = schedule_round_robin;
+	// 设置具体的调度算法
+	schedule = schedulers[FCFS];
 	put_str("thread_init done\n");
 }
