@@ -14,54 +14,22 @@
 #include "stdio.h"
 #include "fs.h"
 
-int32_t open_file_with_tip(const char* pathname, oflags flag);
-int32_t close_file_with_tip(int32_t fd);
-void init(void);
-void pause(const char*);
-extern void my_shell(void);
+void task(void* arg);
 
 int main(void) {
 	init_all();
 	intr_enable();
+	clear();
 
-	pause("\nPress any key to run shell...");
-	process_execute(init, "init");
 
-	while(1);
+	thread_start("T-1", 31, task, "This is T-1\n");
+	thread_start("T-2", 31, task, "This is T-2\n");
+
+
+	while (1);
 	return 0;
 }
 
-/* 暂停直到输入了什么 */
-void pause(const char* msg) {
-	char buf;
-	printf(msg);
-	read(0, &buf, 1);
-}
-
-void init(void) {
-	clear();
-	uint32_t ret_pid = fork();
-	if (ret_pid) {
-		while (1);
-	} else {
-		my_shell();
-	}
-}
-
-int32_t open_file_with_tip(const char* pathname, oflags flag) {
-	int32_t fd = -1;
-	if ((fd = sys_open(pathname, flag)) != -1) {
-		printk("open file successful, fd: %d\n", fd);
-	} else {
-		printk("open file error\n");
-	}
-	return fd;
-}
-
-int32_t close_file_with_tip(int32_t fd) {
-	if (sys_close(fd) != -1) {
-		printk("close file successful, fd: %d\n", fd);
-	} else {
-		printk("close file error\n");
-	}
+void task(void* arg) {
+	printk((char*)arg);
 }

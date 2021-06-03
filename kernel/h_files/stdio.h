@@ -9,4 +9,7 @@ uint32_t printf(const char* format, ...);
 
 void printk(const char* format, ...);
 
+#define logk(msg, ...)\
+	printk("[DEBUG] " msg, ##__VA_ARGS__)
+
 #endif

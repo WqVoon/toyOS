@@ -1,3 +1,4 @@
+#include "stdio.h"
 #include "process.h"
 #include "debug.h"
 #include "print.h"
@@ -9,6 +10,8 @@
 #include "interrupt.h"
 
 void process_activate(task_struct* p_thread);
+// 任务调度函数指针，实际可能指向不同的调度算法
+void (*schedule)(void);
 
 // 主线程的 PCB
 task_struct* main_thread;
@@ -58,10 +61,14 @@ static void kernel_thread(thread_func* function, void* func_arg) {
 
 /**
  * 为了让线程函数执行结束后内核依然能正常运行，该函数赋值给 unused_retaddr
- * TODO:当前仅做无限循环，后面要清理其页表以及从 thread_all_list 中移除
+ * TODO:当前仅实现了必要的任务切换以及方便调试的输出，实际资源的清理并没有做
  */
 static void task_done() {
-	while (1);
+	task_struct* cur = running_thread();
+	cur->status = TASK_DIED;
+	intr_disable();
+	logk("Task `%s` ended\n", cur->name);
+	schedule();
 }
 
 /* 初始化线程栈 thread_stack */
@@ -129,6 +136,7 @@ task_struct* thread_start(
 	ASSERT(!elem_find(&thread_all_list, &thread->all_list_tag));
 	list_append(&thread_all_list, &thread->all_list_tag);
 
+	logk("Task `%s` created\n", name);
 	return thread;
 }
 
@@ -140,39 +148,6 @@ static void make_main_thread(void) {
 	list_append(&thread_all_list, &main_thread->all_list_tag);
 }
 
-/* 实现任务调度 */
-void schedule(void) {
-	ASSERT(intr_get_status() == INTR_OFF);
-
-	task_struct* cur = running_thread();
-	if (cur->status == TASK_RUNNING) {
-		// 如果线程只是 cpu 时间片到了，将其加入就绪队列尾部
-		ASSERT(! elem_find(&thread_ready_list, &cur->general_tag));
-		list_append(&thread_ready_list, &cur->general_tag);
-		cur->ticks = cur->priority;
-		cur->status = TASK_READY;
-	} else {
-		// TODO: ?
-		// 若此线程需要某些事件发生后才能继续上 cpu 运行
-		// 不需要将其加入队列，因为当前线程不在就绪队列中
-	}
-
-	if (list_empty(&thread_ready_list)) {
-		thread_unblock(idle_thread);
-	}
-	// 获取队列队首的 elem
-	thread_tag = NULL;
-	thread_tag = list_pop(&thread_ready_list);
-	// 获取 elem 对应的 PCB
-	task_struct* next = elem2entry(task_struct, general_tag, thread_tag);
-	next->status = TASK_RUNNING;
-
-	process_activate(next);
-
-	// 切换任务
-	switch_to(cur, next);
-}
-
 /* 系统空闲时运行的任务 */
 static void idle(void* arg) {
 	while (1) {
@@ -182,17 +157,6 @@ static void idle(void* arg) {
 			::: "memory"
 		);
 	}
-}
-
-/* 初始化线程环境 */
-void thread_init(void) {
-	put_str("thread_init start\n");
-	list_init(&thread_ready_list);
-	list_init(&thread_all_list);
-	lock_init(&pid_lock);
-	make_main_thread();
-	idle_thread = thread_start("idle", 10, idle, NULL);
-	put_str("thread_init done\n");
 }
 
 /* 将当前线程阻塞，并把其状态标记为 stat */
@@ -243,4 +207,49 @@ void thread_yeild(void) {
 	cur->status = TASK_READY;
 	schedule();
 	intr_set_status(old_status);
+}
+
+/* 实现 round robin 任务调度 */
+static void schedule_round_robin(void) {
+	ASSERT(intr_get_status() == INTR_OFF);
+
+	task_struct* cur = running_thread();
+	if (cur->status == TASK_RUNNING) {
+		// 如果线程只是 cpu 时间片到了，将其加入就绪队列尾部
+		ASSERT(! elem_find(&thread_ready_list, &cur->general_tag));
+		list_append(&thread_ready_list, &cur->general_tag);
+		cur->ticks = cur->priority;
+		cur->status = TASK_READY;
+	} else {
+		// TODO: ?
+		// 若此线程需要某些事件发生后才能继续上 cpu 运行
+		// 不需要将其加入队列，因为当前线程不在就绪队列中
+	}
+
+	if (list_empty(&thread_ready_list)) {
+		thread_unblock(idle_thread);
+	}
+	// 获取队列队首的 elem
+	thread_tag = NULL;
+	thread_tag = list_pop(&thread_ready_list);
+	// 获取 elem 对应的 PCB
+	task_struct* next = elem2entry(task_struct, general_tag, thread_tag);
+	next->status = TASK_RUNNING;
+
+	process_activate(next);
+
+	// 切换任务
+	switch_to(cur, next);
+}
+
+/* 初始化线程环境 */
+void thread_init(void) {
+	put_str("thread_init start\n");
+	list_init(&thread_ready_list);
+	list_init(&thread_all_list);
+	lock_init(&pid_lock);
+	make_main_thread();
+	idle_thread = thread_start("idle", 10, idle, NULL);
+	schedule = schedule_round_robin;
+	put_str("thread_init done\n");
 }

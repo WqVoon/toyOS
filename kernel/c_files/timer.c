@@ -26,6 +26,7 @@
 // 自中断开启以来的总滴答数
 uint32_t ticks;
 
+extern void(*schedule)(void);
 /* 时钟的中断处理函数 */
 static void intr_timer_handler(void) {
 

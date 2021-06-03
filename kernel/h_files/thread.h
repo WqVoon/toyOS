@@ -101,7 +101,7 @@ task_struct* thread_start(
 );
 task_struct* running_thread();
 void thread_init(void);
-void schedule(void);
+// void schedule(void);
 void thread_block(task_status);
 void thread_unblock(task_struct*);
 void init_thread(task_struct* pthread, char* name, int prio);
