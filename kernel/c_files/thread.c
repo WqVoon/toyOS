@@ -145,7 +145,7 @@ task_struct* thread_start(
 /* 将 kernel 中的 main 函数完善为主线程 */
 static void make_main_thread(void) {
 	main_thread = running_thread();
-	init_thread(main_thread, "main", 1);
+	init_thread(main_thread, "main", 255);
 	ASSERT(!elem_find(&thread_all_list, &main_thread->all_list_tag));
 	list_append(&thread_all_list, &main_thread->all_list_tag);
 }
