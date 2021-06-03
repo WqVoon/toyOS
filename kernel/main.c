@@ -23,9 +23,9 @@ int main(void) {
 	clear();
 
 
-	thread_start("T-1", 3, task, "This is T-1\n");
+	thread_start("T-1", 30, task, "This is T-1\n");
 	thread_start("T-2", 2, task, "This is T-2\n");
-	thread_start("T-3", 1, task, "This is T-3\n");
+	thread_start("T-3", 10, task, "This is T-3\n");
 	show_tasks();
 
 	thread_block(TASK_BLOCKED);

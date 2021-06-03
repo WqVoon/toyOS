@@ -65,7 +65,6 @@ static void kernel_thread(thread_func* function, void* func_arg) {
  */
 static void task_done() {
 	task_struct* cur = running_thread();
-	intr_disable();
 	logk("Task `%s` ended\n", cur->name);
 	thread_block(TASK_BLOCKED);
 }
@@ -142,7 +141,7 @@ task_struct* thread_start(
 /* 将 kernel 中的 main 函数完善为主线程 */
 static void make_main_thread(void) {
 	main_thread = running_thread();
-	init_thread(main_thread, "main", 31);
+	init_thread(main_thread, "main", 1);
 	ASSERT(!elem_find(&thread_all_list, &main_thread->all_list_tag));
 	list_append(&thread_all_list, &main_thread->all_list_tag);
 }
@@ -208,6 +207,22 @@ void thread_yeild(void) {
 	intr_set_status(old_status);
 }
 
+/* 展示当前的所有任务 */
+void show_tasks() {
+	intr_status old_status = intr_disable();
+	struct list* plist = &thread_ready_list;
+	struct list_elem* elem = plist->head.next;
+
+	printk("Tasks: ");
+	while (elem != &plist->tail) {
+		task_struct* task = elem2entry(task_struct, general_tag, elem);
+		printk("%s ", task->name);
+		elem = elem->next;
+	}
+	printk("\n");
+	intr_set_status(old_status);
+}
+
 /* 实现 round robin 任务调度 */
 static void schedule_round_robin(void) {
 	ASSERT(intr_get_status() == INTR_OFF);
@@ -234,22 +249,6 @@ static void schedule_round_robin(void) {
 	// 切换任务
 	process_activate(next);
 	switch_to(cur, next);
-}
-
-/* 展示当前的所有任务 */
-void show_tasks() {
-	intr_status old_status = intr_disable();
-	struct list* plist = &thread_ready_list;
-	struct list_elem* elem = plist->head.next;
-
-	printk("Tasks: ");
-	while (elem != &plist->tail) {
-		task_struct* task = elem2entry(task_struct, general_tag, elem);
-		printk("%s ", task->name);
-		elem = elem->next;
-	}
-	printk("\n");
-	intr_set_status(old_status);
 }
 
 /* 实现 FCFS 任务调度 */
@@ -285,6 +284,13 @@ static void schedule_sjf(void) {
 	if (cur->status != TASK_DIED && cur->status != TASK_BLOCKED) {
 		return;
 	}
+	// if (cur->status == TASK_RUNNING) {
+	// 	// 如果线程只是 cpu 时间片到了，将其加入就绪队列尾部
+	// 	ASSERT(! elem_find(&thread_ready_list, &cur->general_tag));
+	// 	list_append(&thread_ready_list, &cur->general_tag);
+	// 	cur->ticks = cur->priority;
+	// 	cur->status = TASK_READY;
+	// }
 
 	if (list_empty(&thread_ready_list)) {
 		thread_unblock(idle_thread);
@@ -311,6 +317,8 @@ static void schedule_sjf(void) {
 	process_activate(next);
 	switch_to(cur, next);
 }
+
+// static void 
 
 /* 用来在 schedulers 中用作下标来选择具体的调度算法 */
 enum SCHEDULER_TYPE {

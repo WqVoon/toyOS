@@ -1,3 +1,4 @@
+#include "stdio.h"
 #include "io.h"
 #include "debug.h"
 #include "stdint.h"
@@ -76,6 +77,11 @@ void mtime_sleep(uint32_t m_seconds) {
 	uint32_t sleep_ticks = DIV_ROUND_UP(m_seconds, mil_seconds_per_intr);
 	ASSERT(sleep_ticks > 0);
 	ticks_to_sleep(sleep_ticks);
+}
+
+/* 获取自操作系统启动到目前为止的滴答数 */
+uint32_t get_time_stamp() {
+	return ticks;
 }
 
 void timer_init(void) {
