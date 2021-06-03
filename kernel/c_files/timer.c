@@ -35,7 +35,6 @@ static void intr_timer_handler(void) {
 	// 如果 stack_magic 的值不正确，那么程序已经没必要运行了
 	ASSERT(cur_thread->stack_magic == *((uint32_t*) "iLym"));
 
-	cur_thread->elapsed_ticks++;
 	ticks++;
 
 	if (cur_thread->ticks == 0) {

@@ -1,3 +1,4 @@
+#include "timer.h"
 #include "stdio.h"
 #include "process.h"
 #include "debug.h"
@@ -100,7 +101,7 @@ void init_thread(task_struct* pthread, char* name, int prio) {
 	pthread->parent_id = cur->parent_id;
 	pthread->ticks = prio;
 	pthread->priority = prio;
-	pthread->elapsed_ticks = 0;
+	pthread->created_timestamp = get_time_stamp();
 	pthread->pgdir = NULL;
 	// 当前线程在内核态下使用的栈顶地址
 	pthread->self_kstack = (uint32_t*)((uint32_t)pthread + PG_SIZE);
@@ -134,7 +135,10 @@ task_struct* thread_start(
 	ASSERT(!elem_find(&thread_all_list, &thread->all_list_tag));
 	list_append(&thread_all_list, &thread->all_list_tag);
 
-	logk("Task `%s` created\n", name);
+	logk(
+		"Task `%s` created, timestamp: %d, priority: %d\n",
+		name, thread->created_timestamp, thread->priority
+	);
 	return thread;
 }
 
@@ -318,20 +322,62 @@ static void schedule_sjf(void) {
 	switch_to(cur, next);
 }
 
-// static void 
+/* 实现 HRRN 任务调度 */
+static void schedule_hrrn(void) {
+	ASSERT(intr_get_status() == INTR_OFF);
+
+	task_struct* cur = running_thread();
+	// HRRN 是非抢占式任务调度，因此只有当前任务终结才会发生任务切换
+	if (cur->status != TASK_DIED && cur->status != TASK_BLOCKED) {
+		return;
+	}
+
+	if (list_empty(&thread_ready_list)) {
+		thread_unblock(idle_thread);
+	}
+
+	uint32_t max_value = 1;
+	task_struct* next = NULL;
+	struct list* plist = &thread_ready_list;
+	thread_tag = plist->head.next;
+
+	while (thread_tag != &plist->tail) {
+		task_struct* task = elem2entry(task_struct, general_tag, thread_tag);
+
+		// 响应比等于 1 + 等待时间/要求服务的时间
+		uint32_t wait_time = get_time_stamp();
+		uint32_t response_radio = \
+			1 + (wait_time - task->created_timestamp) / task->priority;
+
+		if (response_radio > max_value) {
+			max_value = task->priority;
+			next = task;
+		}
+		thread_tag = thread_tag->next;
+	}
+
+	if (next == NULL) return;
+	list_remove(&next->general_tag);
+	next->status = TASK_RUNNING;
+	// 切换任务
+	process_activate(next);
+	switch_to(cur, next);
+}
 
 /* 用来在 schedulers 中用作下标来选择具体的调度算法 */
 enum SCHEDULER_TYPE {
+	SJF,
 	FCFS,
+	HRRN,
 	ROUND_ROBIN,
-	SJF
 };
 
 /* 当前支持的任务调度算法列表 */
 static void(*schedulers[])(void) = {
-	schedule_fcfs,
-	schedule_round_robin,
 	schedule_sjf,
+	schedule_fcfs,
+	schedule_hrrn,
+	schedule_round_robin,
 };
 
 /* 初始化线程环境 */
@@ -343,6 +389,6 @@ void thread_init(void) {
 	make_main_thread();
 	idle_thread = thread_start("idle", 1, idle, NULL);
 	// 设置具体的调度算法
-	schedule = schedulers[SJF];
+	schedule = schedulers[ROUND_ROBIN];
 	put_str("thread_init done\n");
 }

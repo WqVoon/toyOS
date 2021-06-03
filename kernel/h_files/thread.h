@@ -75,8 +75,8 @@ typedef struct __task_struct {
 	// 任务当前的 ticks ，每次加入到 ready 队列时置为 priority
 	// 占用 cpu 其间每次发生时钟中断时减一，为零则让出 cpu
 	uint32_t ticks;
-	// 任务从上 cpu 运行后至今一共占用了多少 ticks，只增不减
-	uint32_t elapsed_ticks;
+	// 任务被创建时的滴答数
+	uint32_t created_timestamp;
 	// 一个任务打开的文件描述符数组，最大数量定义为下面的宏，内部元素是当前描述符在全局 file_table 的下标
 	int32_t fd_table[MAX_FILES_OPEN_PER_PROC];
 	// 其他 list 中的结点标记，用于表示此任务当前的状态

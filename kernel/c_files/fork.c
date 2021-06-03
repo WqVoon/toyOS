@@ -17,7 +17,6 @@ static int32_t copy_pcb_vaddrbitmap_stack0 (
 
 	// 下面分别单独修改一些内容
 	child_thread->pid = fork_pid();
-	child_thread->elapsed_ticks = 0;
 	child_thread->status = TASK_READY;
 	child_thread->ticks = child_thread->priority;
 	child_thread->parent_id = parent_thread->pid;
