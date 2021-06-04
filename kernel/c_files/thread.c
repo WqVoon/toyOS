@@ -66,7 +66,7 @@ static void kernel_thread(thread_func* function, void* func_arg) {
  */
 static void task_done() {
 	task_struct* cur = running_thread();
-	logk("Task `%s` ended\n", cur->name);
+	logk("Task `%s` ended at %d\n", cur->name, get_time_stamp());
 	thread_block(TASK_BLOCKED);
 }
 
