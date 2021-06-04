@@ -307,7 +307,7 @@ static void schedule_sjf(void) {
 
 	while (thread_tag != &plist->tail) {
 		task_struct* task = elem2entry(task_struct, general_tag, thread_tag);
-		if (task->priority < min_value) {
+		if (task->priority <= min_value) {
 			min_value = task->priority;
 			next = task;
 		}
@@ -349,7 +349,7 @@ static void schedule_hrrn(void) {
 		uint32_t response_radio = \
 			1 + (wait_time - task->created_timestamp) / task->priority;
 
-		if (response_radio > max_value) {
+		if (response_radio >= max_value) {
 			max_value = task->priority;
 			next = task;
 		}
@@ -389,6 +389,6 @@ void thread_init(void) {
 	make_main_thread();
 	idle_thread = thread_start("idle", 1, idle, NULL);
 	// 设置具体的调度算法
-	schedule = schedulers[ROUND_ROBIN];
+	schedule = schedulers[SJF];
 	put_str("thread_init done\n");
 }
